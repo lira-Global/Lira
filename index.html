@@ -1,0 +1,83 @@
+<!-- Lira/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIRA - Premium Gold & Silver</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Premium Navigation -->
+        <nav class="nav-bar">
+            <div class="logo">LIRA</div>
+            <div>
+                <a href="index.html" class="btn btn-primary">Home</a>
+                <a href="user-login.html" class="btn btn-primary">Login</a>
+                <a href="user-registration.html" class="btn btn-success">Register</a>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <div class="premium-card float-animation">
+            <h1 style="font-size: 48px; margin-bottom: 20px;">Premium <span style="color: var(--gold);">Gold</span> & <span style="color: var(--silver);">Silver</span></h1>
+            <p style="font-size: 20px; color: #4B5563;">Experience the luxury of pure elegance with LIRA</p>
+        </div>
+
+        <!-- Products Grid -->
+        <h2 style="color: white; margin: 40px 0 20px; font-size: 36px;">Our Premium Collection</h2>
+        <div class="product-grid" id="productGrid">
+            <!-- Dynamic Products will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        // Sample Products Data
+        const products = [
+            {
+                id: 1,
+                name: "24K Gold Ring",
+                category: "Gold",
+                weight: 2,
+                price: 727.20,
+                image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=500",
+                description: "Pure 24K Gold Ring with premium finish"
+            },
+            {
+                id: 2,
+                name: "Silver Necklace",
+                category: "Silver",
+                weight: 10,
+                price: 1500.00,
+                image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500",
+                description: "Elegant Silver Necklace for special occasions"
+            }
+        ];
+
+        // Display Products
+        function displayProducts() {
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = products.map(product => `
+                <div class="product-card">
+                    <img src="${product.image}" alt="${product.name}" class="product-image">
+                    <div class="product-details">
+                        <span class="product-category">${product.category}</span>
+                        <h3 class="product-title">${product.name}</h3>
+                        <p style="color: #6B7280; margin: 10px 0;">${product.description}</p>
+                        <p style="font-size: 14px; color: #9CA3AF;">Weight: ${product.weight}g</p>
+                        <div class="product-price">₹${product.price.toFixed(2)}</div>
+                        <button class="btn btn-primary" onclick="buyNow(${product.id})">Buy Now</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function buyNow(id) {
+            window.location.href = 'user-login.html';
+        }
+
+        displayProducts();
+    </script>
+</body>
+</html>

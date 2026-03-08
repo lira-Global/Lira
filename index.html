@@ -3,168 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lira - Premium MLM E-Commerce Platform</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Lira - Premium Business Platform</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            margin-bottom: 2rem;
+        }
+        
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+        
+        .hero-buttons .btn {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin: 4rem 0;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.2);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        
+        .feature-desc {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin: 4rem 0;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin: 3rem 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .cta-section {
+            background: white;
+            border-radius: 20px;
+            padding: 4rem;
+            text-align: center;
+            margin: 4rem 0;
+        }
+        
+        .cta-section h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .cta-section p {
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+    </style>
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
-        <div class="navbar-brand">Lira</div>
-        <div class="navbar-menu">
-            <a href="/">Home</a>
-            <a href="/products">Products</a>
-            <a href="/franchise">Franchise</a>
-            <a href="/pool">Pool</a>
-            <a href="/login" class="btn btn-outline">Login</a>
-            <a href="/register" class="btn btn-primary">Register</a>
+        <div class="logo">Lira</div>
+        <div class="nav-links">
+            <a href="/index.html">Home</a>
+            <a href="/products.html">Products</a>
+            <a href="/login.html" class="btn-login">Login</a>
+            <a href="/register.html" class="btn-register">Register</a>
         </div>
     </nav>
-
-    <!-- Hero Section -->
-    <section style="padding: 80px 20px; text-align: center; color: white;">
-        <div class="container">
-            <h1 style="font-size: 4rem; margin-bottom: 20px;">Welcome to Lira</h1>
-            <p style="font-size: 1.5rem; margin-bottom: 40px; opacity: 0.9;">India's Most Premium MLM E-Commerce Platform</p>
-            <div>
-                <a href="/register" class="btn btn-primary" style="margin-right: 15px;">Get Started</a>
-                <a href="/products" class="btn btn-outline" style="background: white;">Explore Products</a>
+    
+    <div class="container">
+        <div class="hero">
+            <h1>Welcome to Lira</h1>
+            <p>Your Premium Business Platform for Quality Products and Growth</p>
+            <div class="hero-buttons">
+                <a href="/register.html" class="btn btn-primary">Get Started</a>
+                <a href="/products.html" class="btn btn-secondary" style="background:white; color:#667eea;">Browse Products</a>
             </div>
         </div>
-    </section>
-
-    <!-- Today's Celebrations -->
-    <section class="container">
-        <div class="card" id="celebrations-section">
-            <h2 class="text-center" style="margin-bottom: 30px;">🎉 Today's Celebrations</h2>
-            <div class="grid" id="celebrations-container">
-                <!-- Loaded via JavaScript -->
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value">10,000+</div>
+                <div class="stat-label">Happy Customers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-value">5,000+</div>
+                <div class="stat-label">Products</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-value">100+</div>
+                <div class="stat-label">Franchise Partners</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-value">4.8</div>
+                <div class="stat-label">Customer Rating</div>
             </div>
         </div>
-    </section>
-
-    <!-- Best Performers -->
-    <section class="container">
-        <h2 class="text-center" style="color: white; margin: 50px 0 30px;">🏆 Best Performers Today</h2>
-        <div class="grid">
-            <div class="card">
-                <h3 class="text-center" style="margin-bottom: 20px;">Top Buyers</h3>
-                <div id="top-buyers">
-                    <!-- Loaded via JavaScript -->
-                </div>
+        
+        <h2 class="section-title">Why Choose Lira?</h2>
+        
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🛍️</div>
+                <div class="feature-title">Quality Products</div>
+                <div class="feature-desc">Premium quality products across multiple categories including Gold, Silver, Electronics, and Fashion</div>
             </div>
-            <div class="card">
-                <h3 class="text-center" style="margin-bottom: 20px;">Top Earners</h3>
-                <div id="top-earners">
-                    <!-- Loaded via JavaScript -->
-                </div>
+            <div class="feature-card">
+                <div class="feature-icon">🚚</div>
+                <div class="feature-title">Fast Delivery</div>
+                <div class="feature-desc">Quick delivery through our extensive franchise network across India</div>
             </div>
-        </div>
-    </section>
-
-    <!-- Features -->
-    <section class="container" style="margin: 80px auto;">
-        <h2 class="text-center" style="color: white; margin-bottom: 50px;">Why Choose Lira?</h2>
-        <div class="grid">
-            <div class="card text-center">
-                <i class="fas fa-gem" style="font-size: 48px; color: var(--primary); margin-bottom: 20px;"></i>
-                <h3>Premium Products</h3>
-                <p>High-quality jewelry, clothing, and electronics</p>
+            <div class="feature-card">
+                <div class="feature-icon">💰</div>
+                <div class="feature-title">Best Earnings</div>
+                <div class="feature-desc">Multiple income streams through level income, pool income, and franchise benefits</div>
             </div>
-            <div class="card text-center">
-                <i class="fas fa-chart-line" style="font-size: 48px; color: var(--primary); margin-bottom: 20px;"></i>
-                <h3>10 Level Income</h3>
-                <p>Earn from 10 levels of your network</p>
-            </div>
-            <div class="card text-center">
-                <i class="fas fa-store" style="font-size: 48px; color: var(--primary); margin-bottom: 20px;"></i>
-                <h3>Franchise Opportunity</h3>
-                <p>Become a franchise owner in your area</p>
-            </div>
-            <div class="card text-center">
-                <i class="fas fa-wallet" style="font-size: 48px; color: var(--primary); margin-bottom: 20px;"></i>
-                <h3>12 Month Wallet</h3>
-                <p>Save and grow with our special wallet</p>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <div class="feature-title">Secure Platform</div>
+                <div class="feature-desc">Your transactions and data are completely secure with us</div>
             </div>
         </div>
-    </section>
-
-    <!-- Footer -->
-    <footer style="background: var(--dark); color: white; padding: 50px 0; margin-top: 100px;">
-        <div class="container">
-            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                <div>
-                    <h4 style="margin-bottom: 20px;">Lira</h4>
-                    <p>Premium MLM E-Commerce Platform</p>
-                </div>
-                <div>
-                    <h4 style="margin-bottom: 20px;">Quick Links</h4>
-                    <ul style="list-style: none;">
-                        <li><a href="/" style="color: var(--gray);">Home</a></li>
-                        <li><a href="/products" style="color: var(--gray);">Products</a></li>
-                        <li><a href="/franchise" style="color: var(--gray);">Franchise</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 style="margin-bottom: 20px;">Contact</h4>
-                    <p>Email: support@lira.com</p>
-                    <p>Phone: +91 9999999999</p>
-                </div>
-            </div>
-            <hr style="margin: 30px 0; border-color: #2d3748;">
-            <p class="text-center">&copy; 2026 Lira. All rights reserved.</p>
+        
+        <h2 class="section-title">Featured Products</h2>
+        
+        <div id="featured-products" class="product-grid">
+            <!-- Products will be loaded here -->
         </div>
+        
+        <div class="cta-section">
+            <h2>Ready to Start Your Journey?</h2>
+            <p>Join thousands of successful entrepreneurs and customers who trust Lira</p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <a href="/register.html" class="btn btn-primary">Register Now</a>
+                <a href="/contact.html" class="btn btn-secondary">Contact Us</a>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <p>&copy; 2024 Lira. All rights reserved. | Premium Business Platform</p>
     </footer>
-
-    <script>
-        // Load Today's Celebrations
-        fetch('/api/today-celebrations')
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const container = document.getElementById('celebrations-container');
-                    let html = '';
-                    
-                    data.birthdays.forEach(b => {
-                        html += `<div class="celebration-badge">🎂 ${b.name}'s Birthday</div>`;
-                    });
-                    
-                    data.anniversaries.forEach(a => {
-                        html += `<div class="celebration-badge">💑 ${a.name}'s Anniversary</div>`;
-                    });
-                    
-                    if (html === '') {
-                        html = '<p class="text-center">No celebrations today</p>';
-                    }
-                    
-                    container.innerHTML = html;
-                }
-            });
-
-        // Load Best Performers
-        fetch('/api/best-performers')
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const buyersEl = document.getElementById('top-buyers');
-                    const earnersEl = document.getElementById('top-earners');
-                    
-                    let buyersHtml = '<ol style="padding-left: 20px;">';
-                    data.topBuyers.forEach(b => {
-                        buyersHtml += `<li><strong>${b.name}</strong> - ₹${b.total.toLocaleString()}</li>`;
-                    });
-                    buyersHtml += '</ol>';
-                    
-                    let earnersHtml = '<ol style="padding-left: 20px;">';
-                    data.topEarners.forEach(e => {
-                        earnersHtml += `<li><strong>${e.name}</strong> - ₹${e.amount.toLocaleString()}</li>`;
-                    });
-                    earnersHtml += '</ol>';
-                    
-                    buyersEl.innerHTML = buyersHtml;
-                    earnersEl.innerHTML = earnersHtml;
-                }
-            });
-    </script>
+    
+    <script src="/script.js"></script>
 </body>
 </html>

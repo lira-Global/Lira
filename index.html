@@ -4,111 +4,348 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lira - Premium Business Platform</title>
-    <link rel="stylesheet" href="/styles.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: white;
+            padding: 1rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #667eea;
+        }
+
+        .btn-login {
+            padding: 0.5rem 1.5rem;
+            border: 2px solid #667eea;
+            border-radius: 50px;
+            background: transparent;
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .btn-login:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-register {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 20px;
+        }
+
+        /* Hero Section */
         .hero {
             text-align: center;
             padding: 4rem 2rem;
             color: white;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: rgba(255,255,255,0.1);
             border-radius: 20px;
             margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
         }
-        
+
         .hero h1 {
             font-size: 3rem;
             margin-bottom: 1rem;
         }
-        
+
         .hero p {
             font-size: 1.2rem;
             margin-bottom: 2rem;
             opacity: 0.9;
         }
-        
+
         .hero-buttons {
             display: flex;
             gap: 1rem;
             justify-content: center;
         }
-        
-        .hero-buttons .btn {
+
+        .btn-primary {
             padding: 1rem 2rem;
-            font-size: 1.1rem;
+            border: none;
+            border-radius: 50px;
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 1rem;
         }
-        
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,255,255,0.3);
+        }
+
+        .btn-secondary {
+            padding: 1rem 2rem;
+            border: 2px solid white;
+            border-radius: 50px;
+            background: transparent;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin: 3rem 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Products Grid */
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            margin: 3rem 0;
+            color: white;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+        }
+
+        .product-details {
+            padding: 1.5rem;
+        }
+
+        .product-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .product-price {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .btn-block {
+            width: 100%;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-block:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Features */
         .features {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin: 4rem 0;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin: 3rem 0;
         }
-        
+
         .feature-card {
             background: white;
             padding: 2rem;
             border-radius: 15px;
             text-align: center;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-            transition: all 0.3s;
         }
-        
-        .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.2);
-        }
-        
+
         .feature-icon {
-            font-size: 3rem;
+            font-size: 2.5rem;
             margin-bottom: 1rem;
         }
-        
+
         .feature-title {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
             color: #333;
         }
-        
+
         .feature-desc {
             color: #666;
-            line-height: 1.6;
+            font-size: 0.9rem;
+            line-height: 1.5;
         }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            margin: 4rem 0;
-        }
-        
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            margin: 3rem 0;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
+
+        /* CTA Section */
         .cta-section {
             background: white;
             border-radius: 20px;
             padding: 4rem;
             text-align: center;
-            margin: 4rem 0;
+            margin: 3rem 0;
         }
-        
+
         .cta-section h2 {
             font-size: 2rem;
             margin-bottom: 1rem;
             color: #333;
         }
-        
+
         .cta-section p {
             color: #666;
             margin-bottom: 2rem;
-            font-size: 1.1rem;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: white;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .stats-grid,
+            .product-grid,
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-section {
+                padding: 2rem;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            color: white;
+            padding: 2rem;
         }
     </style>
 </head>
@@ -124,16 +361,18 @@
     </nav>
     
     <div class="container">
+        <!-- Hero Section -->
         <div class="hero">
             <h1>Welcome to Lira</h1>
             <p>Your Premium Business Platform for Quality Products and Growth</p>
             <div class="hero-buttons">
-                <a href="/register.html" class="btn btn-primary">Get Started</a>
-                <a href="/products.html" class="btn btn-secondary" style="background:white; color:#667eea;">Browse Products</a>
+                <a href="/register.html" class="btn-primary">Get Started</a>
+                <a href="/products.html" class="btn-secondary">Browse Products</a>
             </div>
         </div>
         
-        <div class="stats-grid">
+        <!-- Stats Section -->
+        <div class="stats-grid" id="stats-container">
             <div class="stat-card">
                 <div class="stat-icon">👥</div>
                 <div class="stat-value">10,000+</div>
@@ -156,51 +395,152 @@
             </div>
         </div>
         
+        <!-- Features Section -->
         <h2 class="section-title">Why Choose Lira?</h2>
         
         <div class="features">
             <div class="feature-card">
                 <div class="feature-icon">🛍️</div>
                 <div class="feature-title">Quality Products</div>
-                <div class="feature-desc">Premium quality products across multiple categories including Gold, Silver, Electronics, and Fashion</div>
+                <div class="feature-desc">Premium quality products across multiple categories</div>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🚚</div>
                 <div class="feature-title">Fast Delivery</div>
-                <div class="feature-desc">Quick delivery through our extensive franchise network across India</div>
+                <div class="feature-desc">Quick delivery through our franchise network</div>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">💰</div>
                 <div class="feature-title">Best Earnings</div>
-                <div class="feature-desc">Multiple income streams through level income, pool income, and franchise benefits</div>
+                <div class="feature-desc">Multiple income streams and benefits</div>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🔒</div>
                 <div class="feature-title">Secure Platform</div>
-                <div class="feature-desc">Your transactions and data are completely secure with us</div>
+                <div class="feature-desc">Your transactions are completely secure</div>
             </div>
         </div>
         
+        <!-- Products Section -->
         <h2 class="section-title">Featured Products</h2>
         
         <div id="featured-products" class="product-grid">
             <!-- Products will be loaded here -->
+            <div class="loading">Loading products...</div>
         </div>
         
+        <!-- CTA Section -->
         <div class="cta-section">
             <h2>Ready to Start Your Journey?</h2>
             <p>Join thousands of successful entrepreneurs and customers who trust Lira</p>
             <div style="display: flex; gap: 1rem; justify-content: center;">
-                <a href="/register.html" class="btn btn-primary">Register Now</a>
-                <a href="/contact.html" class="btn btn-secondary">Contact Us</a>
+                <a href="/register.html" class="btn-primary">Register Now</a>
+                <a href="/contact.html" class="btn-secondary">Contact Us</a>
             </div>
         </div>
     </div>
     
     <footer class="footer">
-        <p>&copy; 2024 Lira. All rights reserved. | Premium Business Platform</p>
+        <p>© 2024 Lira. All rights reserved. | Premium Business Platform</p>
     </footer>
     
-    <script src="/script.js"></script>
+    <script>
+        // Load products
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/products');
+                const products = await response.json();
+                
+                const container = document.getElementById('featured-products');
+                
+                if (products.length > 0) {
+                    container.innerHTML = products.slice(0, 4).map(product => `
+                        <div class="product-card">
+                            <div class="product-image">🛍️</div>
+                            <div class="product-details">
+                                <div class="product-name">${product.name}</div>
+                                <div class="product-price">₹${product.totalPayable || 0}</div>
+                                <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="product-card">
+                            <div class="product-image">✨</div>
+                            <div class="product-details">
+                                <div class="product-name">Gold Coin</div>
+                                <div class="product-price">₹5,999</div>
+                                <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
+                            </div>
+                        </div>
+                        <div class="product-card">
+                            <div class="product-image">💍</div>
+                            <div class="product-details">
+                                <div class="product-name">Silver Ring</div>
+                                <div class="product-price">₹2,999</div>
+                                <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
+                            </div>
+                        </div>
+                        <div class="product-card">
+                            <div class="product-image">📱</div>
+                            <div class="product-details">
+                                <div class="product-name">Smart Watch</div>
+                                <div class="product-price">₹3,999</div>
+                                <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
+                            </div>
+                        </div>
+                        <div class="product-card">
+                            <div class="product-image">👕</div>
+                            <div class="product-details">
+                                <div class="product-name">Premium Shirt</div>
+                                <div class="product-price">₹1,999</div>
+                                <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load products:', error);
+                document.getElementById('featured-products').innerHTML = `
+                    <div class="product-card">
+                        <div class="product-image">✨</div>
+                        <div class="product-details">
+                            <div class="product-name">Gold Coin</div>
+                            <div class="product-price">₹5,999</div>
+                            <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
+                        </div>
+                    </div>
+                    <div class="product-card">
+                        <div class="product-image">💍</div>
+                        <div class="product-details">
+                            <div class="product-name">Silver Ring</div>
+                            <div class="product-price">₹2,999</div>
+                            <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
+                        </div>
+                    </div>
+                    <div class="product-card">
+                        <div class="product-image">📱</div>
+                        <div class="product-details">
+                            <div class="product-name">Smart Watch</div>
+                            <div class="product-price">₹3,999</div>
+                            <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
+                        </div>
+                    </div>
+                    <div class="product-card">
+                        <div class="product-image">👕</div>
+                        <div class="product-details">
+                            <div class="product-name">Premium Shirt</div>
+                            <div class="product-price">₹1,999</div>
+                            <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Load products when page loads
+        document.addEventListener('DOMContentLoaded', loadProducts);
+    </script>
 </body>
 </html>

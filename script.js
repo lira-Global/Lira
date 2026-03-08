@@ -1,4 +1,4 @@
-// API Functions
+// ==================== API Functions ====================
 const API = {
     async request(endpoint, options = {}) {
         const defaultOptions = {
@@ -7,14 +7,19 @@ const API = {
             }
         };
         
-        const response = await fetch(endpoint, { ...defaultOptions, ...options });
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'Something went wrong');
+        try {
+            const response = await fetch(endpoint, { ...defaultOptions, ...options });
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Something went wrong');
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error;
         }
-        
-        return data;
     },
     
     async post(endpoint, body) {
@@ -43,15 +48,21 @@ const API = {
     }
 };
 
-// UI Functions
+// ==================== UI Functions ====================
 function showAlert(message, type = 'success') {
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type}`;
     alertDiv.textContent = message;
     alertDiv.style.position = 'fixed';
     alertDiv.style.top = '20px';
     alertDiv.style.right = '20px';
     alertDiv.style.zIndex = '9999';
+    alertDiv.style.padding = '1rem 2rem';
+    alertDiv.style.borderRadius = '10px';
+    alertDiv.style.backgroundColor = type === 'success' ? '#d4edda' : '#f8d7da';
+    alertDiv.style.color = type === 'success' ? '#155724' : '#721c24';
+    alertDiv.style.border = type === 'success' ? '1px solid #c3e6cb' : '1px solid #f5c6cb';
+    alertDiv.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
+    alertDiv.style.fontWeight = '500';
     alertDiv.style.animation = 'slideIn 0.3s';
     
     document.body.appendChild(alertDiv);
@@ -82,6 +93,34 @@ function showLoading(show = true) {
                 align-items: center;
                 z-index: 10000;
             `;
+            
+            if (!document.getElementById('spinner-style')) {
+                const spinnerStyle = document.createElement('style');
+                spinnerStyle.id = 'spinner-style';
+                spinnerStyle.textContent = `
+                    .spinner {
+                        width: 50px;
+                        height: 50px;
+                        border: 5px solid #f3f3f3;
+                        border-top: 5px solid #667eea;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(spinnerStyle);
+            }
             document.body.appendChild(loader);
         }
     } else if (loader) {
@@ -89,22 +128,6 @@ function showLoading(show = true) {
     }
 }
 
-// Modal Functions
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.add('active');
-    }
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active');
-    }
-}
-
-// Format Currency
 function formatCurrency(amount) {
     return new Intl.NumberFormat('en-IN', {
         style: 'currency',
@@ -113,7 +136,6 @@ function formatCurrency(amount) {
     }).format(amount);
 }
 
-// Format Date
 function formatDate(date) {
     return new Date(date).toLocaleDateString('en-IN', {
         day: '2-digit',
@@ -122,7 +144,7 @@ function formatDate(date) {
     });
 }
 
-// Check Login Status
+// ==================== Auth Functions ====================
 async function checkAuth() {
     try {
         const user = await API.get('/api/user');
@@ -132,38 +154,36 @@ async function checkAuth() {
     }
 }
 
-// Logout
 async function logout() {
     try {
         await API.post('/api/logout', {});
         localStorage.removeItem('user');
         sessionStorage.removeItem('user');
-        window.location.href = '/index.html';
+        showAlert('Logged out successfully');
+        setTimeout(() => {
+            window.location.href = '/index.html';
+        }, 1000);
     } catch (error) {
         showAlert(error.message, 'error');
     }
 }
 
-// Initialize on page load
+// ==================== Page Initializations ====================
 document.addEventListener('DOMContentLoaded', async () => {
-    // Update navbar based on login status
-    const user = await checkAuth();
-    updateNavbar(user);
-    
-    // Initialize page-specific functions
     const page = window.location.pathname.split('/').pop();
+    
     switch(page) {
-        case 'index.html':
-            initHomePage();
-            break;
-        case 'dashboard.html':
-            initDashboard();
+        case 'login.html':
+            initLogin();
             break;
         case 'register.html':
             initRegister();
             break;
-        case 'login.html':
-            initLogin();
+        case 'dashboard.html':
+            initDashboard();
+            break;
+        case 'admin.html':
+            initAdmin();
             break;
         case 'products.html':
             initProducts();
@@ -171,95 +191,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         case 'add-fund.html':
             initAddFund();
             break;
-        case 'admin.html':
-            initAdmin();
+        case 'wallet.html':
+            initWallet();
+            break;
+        case 'profile.html':
+            initProfile();
+            break;
+        case 'activate-id.html':
+            initActivate();
             break;
     }
 });
 
-// Update Navbar
-function updateNavbar(user) {
-    const navLinks = document.querySelector('.nav-links');
-    if (!navLinks) return;
+// ==================== Login Page ====================
+function initLogin() {
+    const form = document.getElementById('loginForm');
+    if (!form) return;
     
-    if (user) {
-        navLinks.innerHTML = `
-            <a href="/index.html">Home</a>
-            <a href="/dashboard.html">Dashboard</a>
-            <a href="/products.html">Products</a>
-            <a href="/wallet.html">Wallet</a>
-            ${user.isFranchise ? '<a href="/franchise.html">Franchise</a>' : ''}
-            <a href="/profile.html">Profile</a>
-            <button class="btn-logout" onclick="logout()">Logout</button>
-            <span style="color:#667eea; font-weight:600;">₹${user.wallet.toFixed(2)}</span>
-        `;
-    } else {
-        navLinks.innerHTML = `
-            <a href="/index.html">Home</a>
-            <a href="/products.html">Products</a>
-            <a href="/login.html" class="btn-login">Login</a>
-            <a href="/register.html" class="btn-register">Register</a>
-        `;
-    }
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        try {
+            showLoading(true);
+            const result = await API.post('/api/login', data);
+            showAlert('Login successful!');
+            
+            if (result.isAdmin) {
+                window.location.href = '/admin.html';
+            } else {
+                window.location.href = '/dashboard.html';
+            }
+        } catch (error) {
+            showAlert(error.message, 'error');
+        } finally {
+            showLoading(false);
+        }
+    });
 }
 
-// Home Page
-async function initHomePage() {
-    try {
-        // Load products
-        const products = await API.get('/api/products');
-        const productsGrid = document.getElementById('featured-products');
-        
-        if (productsGrid) {
-            productsGrid.innerHTML = products.slice(0, 4).map(product => `
-                <div class="product-card">
-                    <img src="${product.image || '/default-product.jpg'}" alt="${product.name}" class="product-image">
-                    <div class="product-details">
-                        <h3 class="product-name">${product.name}</h3>
-                        <div class="product-price">${formatCurrency(product.totalPayable)}</div>
-                        <div class="product-category">${product.category?.name || 'General'}</div>
-                        <button class="btn btn-primary btn-block" onclick="location.href='/login.html'">Buy Now</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // Load stats
-        const stats = document.querySelector('.stats-grid');
-        if (stats) {
-            stats.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-icon">👥</div>
-                    <div class="stat-value">10,000+</div>
-                    <div class="stat-label">Happy Customers</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">📦</div>
-                    <div class="stat-value">5,000+</div>
-                    <div class="stat-label">Products</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">🏆</div>
-                    <div class="stat-value">100+</div>
-                    <div class="stat-label">Franchise</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">⭐</div>
-                    <div class="stat-value">4.8</div>
-                    <div class="stat-label">Rating</div>
-                </div>
-            `;
-        }
-    } catch (error) {
-        showAlert(error.message, 'error');
-    }
-}
-
-// Register Page
+// ==================== Register Page ====================
 function initRegister() {
     const form = document.getElementById('registerForm');
     const otpBtn = document.getElementById('sendOtp');
     const verifyBtn = document.getElementById('verifyOtp');
+    
+    if (!form) return;
     
     let isEmailVerified = false;
     
@@ -277,6 +256,7 @@ function initRegister() {
                 showAlert('OTP sent to your email');
                 otpBtn.disabled = true;
                 otpBtn.textContent = 'OTP Sent';
+                otpBtn.style.opacity = '0.5';
             } catch (error) {
                 showAlert(error.message, 'error');
             } finally {
@@ -302,6 +282,8 @@ function initRegister() {
                 showAlert('Email verified successfully');
                 verifyBtn.disabled = true;
                 verifyBtn.textContent = 'Verified ✓';
+                verifyBtn.style.background = '#28a745';
+                verifyBtn.style.opacity = '0.5';
             } catch (error) {
                 showAlert(error.message, 'error');
             } finally {
@@ -310,65 +292,33 @@ function initRegister() {
         });
     }
     
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!isEmailVerified) {
-                showAlert('Please verify your email first', 'error');
-                return;
-            }
-            
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-            
-            try {
-                showLoading(true);
-                const result = await API.post('/api/register', data);
-                showAlert('Registration successful! Your User ID is your mobile number and password is also your mobile number');
-                setTimeout(() => {
-                    window.location.href = '/login.html';
-                }, 3000);
-            } catch (error) {
-                showAlert(error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
-        });
-    }
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (!isEmailVerified) {
+            showAlert('Please verify your email first', 'error');
+            return;
+        }
+        
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        try {
+            showLoading(true);
+            const result = await API.post('/api/register', data);
+            showAlert('Registration successful! Your User ID is your mobile number');
+            setTimeout(() => {
+                window.location.href = '/login.html';
+            }, 3000);
+        } catch (error) {
+            showAlert(error.message, 'error');
+        } finally {
+            showLoading(false);
+        }
+    });
 }
 
-// Login Page
-function initLogin() {
-    const form = document.getElementById('loginForm');
-    
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-            
-            try {
-                showLoading(true);
-                const result = await API.post('/api/login', data);
-                showAlert('Login successful');
-                
-                if (data.userId === 'admin') {
-                    window.location.href = '/admin.html';
-                } else {
-                    window.location.href = '/dashboard.html';
-                }
-            } catch (error) {
-                showAlert(error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
-        });
-    }
-}
-
-// Dashboard
+// ==================== Dashboard Page ====================
 async function initDashboard() {
     try {
         const user = await checkAuth();
@@ -377,10 +327,15 @@ async function initDashboard() {
             return;
         }
         
-        // Load dashboard data
+        if (user.userId === 'admin') {
+            window.location.href = '/admin.html';
+            return;
+        }
+        
+        document.getElementById('username').textContent = user.username;
+        
         const data = await API.get('/api/dashboard');
         
-        // Update stats
         document.getElementById('wallet-balance').textContent = formatCurrency(data.wallet);
         document.getElementById('month-wallet').textContent = formatCurrency(data.monthWallet);
         document.getElementById('total-purchase').textContent = formatCurrency(data.totalPurchase);
@@ -388,241 +343,87 @@ async function initDashboard() {
         document.getElementById('direct-count').textContent = data.directCount;
         document.getElementById('today-purchase').textContent = formatCurrency(data.todayPurchase);
         document.getElementById('today-income').textContent = formatCurrency(data.todayIncome);
+        document.getElementById('best-performer').innerHTML = `${data.bestPerformer}<br><small>${formatCurrency(data.bestPerformerAmount)}</small>`;
+        document.getElementById('best-earner').innerHTML = `${data.bestEarner}<br><small>${formatCurrency(data.bestEarnerAmount)}</small>`;
         
-        // Best performer/earner
-        document.getElementById('best-performer').innerHTML = `
-            <div>${data.bestPerformer}</div>
-            <small>${formatCurrency(data.bestPerformerAmount)}</small>
-        `;
-        document.getElementById('best-earner').innerHTML = `
-            <div>${data.bestEarner}</div>
-            <small>${formatCurrency(data.bestEarnerAmount)}</small>
-        `;
-        
-        // Activation status
         const activationDiv = document.getElementById('activation-status');
-        if (activationDiv) {
-            if (data.active) {
-                activationDiv.innerHTML = `
-                    <div class="badge badge-success">Active until ${formatDate(data.activeUntil)}</div>
-                `;
-            } else {
-                activationDiv.innerHTML = `
-                    <button class="btn btn-primary" onclick="location.href='/activate-id.html'">
-                        Click here to activate (₹499/30 days)
-                    </button>
-                `;
-            }
+        if (data.active) {
+            activationDiv.innerHTML = `<span style="background:#d4edda; color:#155724; padding:0.5rem 1rem; border-radius:50px;">Active until ${formatDate(data.activeUntil)}</span>`;
+        } else {
+            activationDiv.innerHTML = `<button onclick="location.href='/activate-id.html'" style="background:#667eea; color:white; border:none; padding:0.5rem 1rem; border-radius:50px; cursor:pointer;">Activate Now (₹499)</button>`;
         }
         
-        // Tree view
-        // You can implement tree visualization here
-    } catch (error) {
-        showAlert(error.message, 'error');
-    }
-}
-
-// Products Page
-async function initProducts() {
-    try {
-        const user = await checkAuth();
-        const products = await API.get('/api/products');
-        const container = document.getElementById('products-container');
-        
-        if (container) {
-            container.innerHTML = products.map(product => `
-                <div class="product-card">
-                    <img src="${product.image || '/default-product.jpg'}" alt="${product.name}" class="product-image">
-                    <div class="product-details">
-                        <h3 class="product-name">${product.name}</h3>
-                        <div class="product-price">${formatCurrency(product.totalPayable)}</div>
-                        <div class="product-category">${product.category?.name || 'General'}</div>
-                        <button class="btn btn-primary btn-block" onclick="buyProduct('${product._id}')">
-                            ${user ? 'Buy Now' : 'Login to Buy'}
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-    } catch (error) {
-        showAlert(error.message, 'error');
-    }
-}
-
-// Buy Product
-async function buyProduct(productId) {
-    const user = await checkAuth();
-    if (!user) {
-        window.location.href = '/login.html';
-        return;
-    }
-    
-    const quantity = prompt('Enter quantity:', '1');
-    if (!quantity) return;
-    
-    try {
-        showLoading(true);
-        const result = await API.post('/api/purchase', {
-            products: [{ productId, quantity: parseInt(quantity) }],
-            type: 'regular'
-        });
-        showAlert('Purchase successful! Check your email for invoice.');
-        setTimeout(() => window.location.reload(), 2000);
-    } catch (error) {
-        showAlert(error.message, 'error');
-    } finally {
-        showLoading(false);
-    }
-}
-
-// Add Fund Page
-function initAddFund() {
-    const form = document.getElementById('addFundForm');
-    
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(form);
-            
-            try {
-                showLoading(true);
-                const result = await API.upload('/api/add-fund', formData);
-                showAlert('Fund request submitted successfully');
-                form.reset();
-            } catch (error) {
-                showAlert(error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
-        });
-    }
-    
-    // Load company details
-    loadCompanyDetails();
-}
-
-async function loadCompanyDetails() {
-    try {
-        const details = await API.get('/api/company-details');
-        
-        const detailsDiv = document.getElementById('company-details');
-        if (detailsDiv) {
-            detailsDiv.innerHTML = `
-                <div class="wallet-card">
-                    <h3>Bank Details</h3>
-                    <p><strong>Bank:</strong> ${details.bankName}</p>
-                    <p><strong>Account:</strong> ${details.accountNumber}</p>
-                    <p><strong>IFSC:</strong> ${details.ifscCode}</p>
-                    <p><strong>Holder:</strong> ${details.accountHolder}</p>
-                    <p><strong>UPI ID:</strong> ${details.upiId}</p>
-                    ${details.qrCode ? `<img src="${details.qrCode}" alt="QR Code" style="max-width:200px; margin-top:1rem;">` : ''}
-                </div>
+        const navLinks = document.getElementById('navLinks');
+        if (navLinks) {
+            navLinks.innerHTML = `
+                <a href="/index.html">Home</a>
+                <a href="/dashboard.html">Dashboard</a>
+                <a href="/products.html">Products</a>
+                <a href="/wallet.html">Wallet</a>
+                <a href="/profile.html">Profile</a>
+                <button onclick="logout()" style="padding:0.5rem 1.5rem; border:none; border-radius:50px; background:#ff4757; color:white; cursor:pointer;">Logout</button>
+                <span style="color:#667eea; font-weight:600;">₹${user.wallet}</span>
             `;
         }
     } catch (error) {
-        console.error('Failed to load company details:', error);
+        showAlert(error.message, 'error');
     }
 }
 
-// Admin Page
-function initAdmin() {
-    checkAuth().then(user => {
+// ==================== Admin Page ====================
+async function initAdmin() {
+    try {
+        const user = await checkAuth();
         if (!user || user.userId !== 'admin') {
-            window.location.href = '/index.html';
+            window.location.href = '/login.html';
             return;
         }
-    });
-    
-    // Load pending fund requests
-    loadFundRequests();
-    
-    // Category form
-    const categoryForm = document.getElementById('addCategoryForm');
-    if (categoryForm) {
-        categoryForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(categoryForm);
-            const data = Object.fromEntries(formData.entries());
-            
-            try {
-                showLoading(true);
-                await API.post('/api/admin/add-category', data);
-                showAlert('Category added successfully');
-                categoryForm.reset();
-            } catch (error) {
-                showAlert(error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
-        });
-    }
-    
-    // Product form
-    const productForm = document.getElementById('addProductForm');
-    if (productForm) {
-        productForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(productForm);
-            
-            try {
-                showLoading(true);
-                await API.upload('/api/admin/add-product', formData);
-                showAlert('Product added successfully');
-                productForm.reset();
-            } catch (error) {
-                showAlert(error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
-        });
-    }
-    
-    // Company details form
-    const companyForm = document.getElementById('updateCompanyForm');
-    if (companyForm) {
-        companyForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(companyForm);
-            
-            try {
-                showLoading(true);
-                await API.upload('/api/admin/update-company', formData);
-                showAlert('Company details updated');
-            } catch (error) {
-                showAlert(error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
-        });
+        
+        const navLinks = document.getElementById('navLinks');
+        if (navLinks) {
+            navLinks.innerHTML = `
+                <a href="/index.html">Home</a>
+                <a href="/admin.html">Admin</a>
+                <button onclick="logout()" style="padding:0.5rem 1.5rem; border:none; border-radius:50px; background:#ff4757; color:white; cursor:pointer;">Logout</button>
+            `;
+        }
+        
+        loadFundRequests();
+        loadCategories();
+        loadUsers();
+        
+    } catch (error) {
+        window.location.href = '/login.html';
     }
 }
 
+// Admin Functions
 async function loadFundRequests() {
+    const tbody = document.getElementById('fund-requests');
+    if (!tbody) return;
+    
     try {
         const requests = await API.get('/api/admin/fund-requests');
-        const tbody = document.getElementById('fund-requests');
-        
-        if (tbody) {
+        if (requests.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No pending requests</td></tr>';
+        } else {
             tbody.innerHTML = requests.map(req => `
                 <tr>
                     <td>${req.userId}</td>
                     <td>${req.name}</td>
-                    <td>${formatCurrency(req.amount)}</td>
+                    <td>₹${req.amount}</td>
                     <td>${req.utr}</td>
                     <td>${formatDate(req.createdAt)}</td>
+                    <td><button onclick="viewScreenshot('${req.screenshot}')">View</button></td>
                     <td>
-                        <button class="btn btn-success btn-sm" onclick="approveFund('${req._id}')">Approve</button>
-                        <button class="btn btn-danger btn-sm" onclick="rejectFund('${req._id}')">Reject</button>
+                        <button onclick="approveFund('${req._id}')" style="background:#28a745; color:white; border:none; padding:0.3rem 1rem; border-radius:5px; margin:2px;">Approve</button>
+                        <button onclick="rejectFund('${req._id}')" style="background:#dc3545; color:white; border:none; padding:0.3rem 1rem; border-radius:5px; margin:2px;">Reject</button>
                     </td>
                 </tr>
             `).join('');
         }
     } catch (error) {
-        console.error('Failed to load fund requests:', error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Failed to load</td></tr>';
     }
 }
 
@@ -630,7 +431,7 @@ async function approveFund(id) {
     try {
         showLoading(true);
         await API.post(`/api/admin/approve-fund/${id}`, {});
-        showAlert('Fund request approved');
+        showAlert('Fund approved');
         loadFundRequests();
     } catch (error) {
         showAlert(error.message, 'error');
@@ -643,7 +444,7 @@ async function rejectFund(id) {
     try {
         showLoading(true);
         await API.post(`/api/admin/reject-fund/${id}`, {});
-        showAlert('Fund request rejected');
+        showAlert('Fund rejected');
         loadFundRequests();
     } catch (error) {
         showAlert(error.message, 'error');
@@ -652,7 +453,244 @@ async function rejectFund(id) {
     }
 }
 
-// Profile Page
+async function loadCategories() {
+    const select = document.getElementById('category-select');
+    if (!select) return;
+    
+    try {
+        const response = await fetch('/api/categories');
+        const categories = await response.json();
+        select.innerHTML = '<option value="">Select Category</option>' + 
+            categories.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
+    } catch (error) {
+        console.error('Failed to load categories:', error);
+    }
+}
+
+async function loadUsers() {
+    const tbody = document.getElementById('users-list');
+    if (!tbody) return;
+    
+    try {
+        const users = await API.get('/api/admin/users');
+        tbody.innerHTML = users.map(user => `
+            <tr>
+                <td>${user.userId}</td>
+                <td>${user.username}</td>
+                <td>₹${user.wallet}</td>
+                <td>${user.active ? '✅' : '❌'}</td>
+                <td>
+                    <button onclick="addUserFund('${user.userId}')" style="background:#28a745; color:white; border:none; padding:0.3rem 0.5rem;">Add</button>
+                    <button onclick="deductUserFund('${user.userId}')" style="background:#dc3545; color:white; border:none; padding:0.3rem 0.5rem;">Deduct</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Failed to load</td></tr>';
+    }
+}
+
+async function addUserFund(userId) {
+    const amount = prompt('Enter amount to add:');
+    if (!amount) return;
+    
+    try {
+        await API.post(`/api/admin/add-fund/${userId}`, { amount: parseFloat(amount) });
+        showAlert('Fund added');
+        loadUsers();
+    } catch (error) {
+        showAlert(error.message, 'error');
+    }
+}
+
+async function deductUserFund(userId) {
+    const amount = prompt('Enter amount to deduct:');
+    if (!amount) return;
+    
+    try {
+        await API.post(`/api/admin/deduct-fund/${userId}`, { amount: parseFloat(amount) });
+        showAlert('Fund deducted');
+        loadUsers();
+    } catch (error) {
+        showAlert(error.message, 'error');
+    }
+}
+
+// Category Form
+document.getElementById('addCategoryForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    try {
+        showLoading(true);
+        await API.post('/api/admin/add-category', data);
+        showAlert('Category added');
+        e.target.reset();
+    } catch (error) {
+        showAlert(error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+});
+
+// Product Form
+document.getElementById('addProductForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    try {
+        showLoading(true);
+        await API.upload('/api/admin/add-product', formData);
+        showAlert('Product added');
+        e.target.reset();
+    } catch (error) {
+        showAlert(error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+});
+
+// ==================== Products Page ====================
+async function initProducts() {
+    const container = document.getElementById('products-container');
+    if (!container) return;
+    
+    try {
+        const user = await checkAuth();
+        const products = await API.get('/api/products');
+        
+        container.innerHTML = products.map(product => `
+            <div style="background:white; border-radius:15px; overflow:hidden; box-shadow:0 5px 20px rgba(0,0,0,0.1);">
+                <div style="height:200px; background:linear-gradient(135deg, #667eea, #764ba2); display:flex; align-items:center; justify-content:center; color:white; font-size:3rem;">
+                    🛍️
+                </div>
+                <div style="padding:1.5rem;">
+                    <h3 style="margin-bottom:0.5rem;">${product.name}</h3>
+                    <div style="font-size:1.3rem; color:#667eea; margin-bottom:1rem;">₹${product.totalPayable}</div>
+                    <button onclick="buyProduct('${product._id}')" style="width:100%; padding:0.8rem; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:10px; cursor:pointer;">
+                        ${user ? 'Buy Now' : 'Login to Buy'}
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        container.innerHTML = '<div style="color:white; text-align:center;">Failed to load products</div>';
+    }
+}
+
+async function buyProduct(productId) {
+    const user = await checkAuth();
+    if (!user) {
+        window.location.href = '/login.html';
+        return;
+    }
+    
+    const quantity = prompt('Enter quantity:', '1');
+    if (!quantity) return;
+    
+    try {
+        showLoading(true);
+        await API.post('/api/purchase', {
+            products: [{ productId, quantity: parseInt(quantity) }],
+            type: 'regular'
+        });
+        showAlert('Purchase successful!');
+    } catch (error) {
+        showAlert(error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// ==================== Add Fund Page ====================
+async function initAddFund() {
+    const form = document.getElementById('addFundForm');
+    if (!form) return;
+    
+    try {
+        const details = await API.get('/api/company-details');
+        const detailsDiv = document.getElementById('company-details');
+        if (detailsDiv) {
+            detailsDiv.innerHTML = `
+                <div style="background:linear-gradient(135deg, #667eea, #764ba2); color:white; padding:2rem; border-radius:20px; margin-bottom:2rem;">
+                    <h3 style="margin-bottom:1rem;">Bank Details</h3>
+                    <p><strong>Bank:</strong> ${details.bankName}</p>
+                    <p><strong>Account:</strong> ${details.accountNumber}</p>
+                    <p><strong>IFSC:</strong> ${details.ifscCode}</p>
+                    <p><strong>Holder:</strong> ${details.accountHolder}</p>
+                    <p><strong>UPI:</strong> ${details.upiId}</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Failed to load company details');
+    }
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        
+        try {
+            showLoading(true);
+            await API.upload('/api/add-fund', formData);
+            showAlert('Fund request submitted');
+            form.reset();
+        } catch (error) {
+            showAlert(error.message, 'error');
+        } finally {
+            showLoading(false);
+        }
+    });
+}
+
+// ==================== Wallet Page ====================
+async function initWallet() {
+    try {
+        const user = await checkAuth();
+        if (!user) {
+            window.location.href = '/login.html';
+            return;
+        }
+        
+        document.getElementById('main-wallet').textContent = formatCurrency(user.wallet);
+        document.getElementById('month-wallet').textContent = formatCurrency(user.monthWallet);
+        
+        const history = user.monthWalletHistory || [];
+        const tbody = document.getElementById('month-history');
+        if (history.length > 0) {
+            tbody.innerHTML = history.map(h => `
+                <tr>
+                    <td>${h.month}</td>
+                    <td>${h.year}</td>
+                    <td>${formatCurrency(h.amount)}</td>
+                    <td>${formatDate(h.addedAt)}</td>
+                </tr>
+            `).join('');
+        }
+        
+        document.getElementById('addMonthWalletForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const amount = document.getElementById('monthAmount').value;
+            
+            try {
+                showLoading(true);
+                await API.post('/api/add-month-wallet', { amount: parseFloat(amount) });
+                showAlert('Added to month wallet');
+                setTimeout(() => window.location.reload(), 1500);
+            } catch (error) {
+                showAlert(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+        
+    } catch (error) {
+        window.location.href = '/login.html';
+    }
+}
+
+// ==================== Profile Page ====================
 async function initProfile() {
     try {
         const user = await checkAuth();
@@ -661,94 +699,68 @@ async function initProfile() {
             return;
         }
         
-        const form = document.getElementById('profileForm');
-        if (form) {
-            document.getElementById('birthdate').value = user.birthdate ? formatDate(user.birthdate) : '';
-            document.getElementById('anniversary').value = user.anniversary ? formatDate(user.anniversary) : '';
+        document.getElementById('userId').value = user.userId;
+        document.getElementById('username').value = user.username;
+        document.getElementById('mobile').value = user.mobile;
+        document.getElementById('email').value = user.email;
+        document.getElementById('sponsorId').value = user.sponsorId;
+        
+        document.getElementById('profileForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
             
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const formData = new FormData(form);
-                const data = Object.fromEntries(formData.entries());
-                
-                try {
-                    showLoading(true);
-                    await API.post('/api/update-profile', data);
-                    showAlert('Profile updated successfully');
-                } catch (error) {
-                    showAlert(error.message, 'error');
-                } finally {
-                    showLoading(false);
-                }
-            });
-        }
-    } catch (error) {
-        showAlert(error.message, 'error');
-    }
-}
-
-// Month Wallet
-async function initMonthWallet() {
-    try {
-        const user = await checkAuth();
-        if (!user) {
-            window.location.href = '/login.html';
-            return;
-        }
+            try {
+                showLoading(true);
+                await API.post('/api/update-profile', data);
+                showAlert('Profile updated');
+            } catch (error) {
+                showAlert(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
         
-        const form = document.getElementById('addMonthWalletForm');
-        if (form) {
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const amount = document.getElementById('monthAmount').value;
-                
-                try {
-                    showLoading(true);
-                    await API.post('/api/add-month-wallet', { amount: parseFloat(amount) });
-                    showAlert('Added to month wallet successfully');
-                    form.reset();
-                    setTimeout(() => window.location.reload(), 2000);
-                } catch (error) {
-                    showAlert(error.message, 'error');
-                } finally {
-                    showLoading(false);
-                }
-            });
-        }
     } catch (error) {
-        showAlert(error.message, 'error');
+        window.location.href = '/login.html';
     }
 }
 
-// Activate ID
+// ==================== Activate ID Page ====================
 async function initActivate() {
-    try {
-        const user = await checkAuth();
-        if (!user) {
-            window.location.href = '/login.html';
-            return;
-        }
+    const btn = document.getElementById('activateBtn');
+    if (!btn) return;
+    
+    btn.addEventListener('click', async () => {
+        if (!confirm('Activate ID for 30 days? Cost: ₹499')) return;
         
-        const btn = document.getElementById('activateBtn');
-        if (btn) {
-            btn.addEventListener('click', async () => {
-                if (!confirm('Activate ID for 30 days? Cost: ₹499')) return;
-                
-                try {
-                    showLoading(true);
-                    await API.post('/api/activate', {});
-                    showAlert('ID activated successfully for 30 days');
-                    setTimeout(() => window.location.href = '/dashboard.html', 2000);
-                } catch (error) {
-                    showAlert(error.message, 'error');
-                } finally {
-                    showLoading(false);
-                }
-            });
+        try {
+            showLoading(true);
+            await API.post('/api/activate', {});
+            showAlert('ID activated successfully');
+            setTimeout(() => window.location.href = '/dashboard.html', 2000);
+        } catch (error) {
+            showAlert(error.message, 'error');
+        } finally {
+            showLoading(false);
         }
-    } catch (error) {
-        showAlert(error.message, 'error');
+    });
+}
+
+// Tab switching function for admin
+function showAdminTab(tabName) {
+    document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    
+    document.getElementById(tabName + '-section')?.classList.add('active');
+    event.target.classList.add('active');
+}
+
+// View screenshot
+function viewScreenshot(path) {
+    if (path) {
+        window.open(path, '_blank');
+    } else {
+        showAlert('No screenshot available', 'error');
     }
 }

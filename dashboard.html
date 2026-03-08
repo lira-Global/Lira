@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .welcome-section {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+        }
+        
+        .welcome-section h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .welcome-section p {
+            opacity: 0.9;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .quick-action-btn {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .quick-action-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+        }
+        
+        .quick-action-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .quick-action-label {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .performance-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .performance-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .performance-title {
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+        
+        .performance-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">Lira</div>
+        <div class="nav-links">
+            <a href="/index.html">Home</a>
+            <a href="/dashboard.html">Dashboard</a>
+            <a href="/products.html">Products</a>
+            <a href="/wallet.html">Wallet</a>
+            <a href="/profile.html">Profile</a>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+            <span style="color:#667eea; font-weight:600;" id="wallet-balance">₹0</span>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="welcome-section">
+            <h1>Welcome back, <span id="username">User</span>!</h1>
+            <p id="activation-status"></p>
+        </div>
+        
+        <div class="quick-actions">
+            <div class="quick-action-btn" onclick="location.href='/products.html'">
+                <div class="quick-action-icon">🛍️</div>
+                <div class="quick-action-label">Buy Products</div>
+            </div>
+            <div class="quick-action-btn" onclick="location.href='/add-fund.html'">
+                <div class="quick-action-icon">💰</div>
+                <div class="quick-action-label">Add Fund</div>
+            </div>
+            <div class="quick-action-btn" onclick="location.href='/wallet.html'">
+                <div class="quick-action-icon">💳</div>
+                <div class="quick-action-label">Month Wallet</div>
+            </div>
+            <div class="quick-action-btn" onclick="location.href='/income.html'">
+                <div class="quick-action-icon">📊</div>
+                <div class="quick-action-label">Income</div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="stat-card">
+                <div class="stat-icon">💼</div>
+                <div class="stat-value" id="wallet-balance-stat">₹0</div>
+                <div class="stat-label">Main Wallet</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📅</div>
+                <div class="stat-value" id="month-wallet-stat">₹0</div>
+                <div class="stat-label">12 Month Wallet</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-value" id="total-purchase">₹0</div>
+                <div class="stat-label">Total Purchase</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-value" id="total-income">₹0</div>
+                <div class="stat-label">Total Income</div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value" id="direct-count">0</div>
+                <div class="stat-label">Direct Members</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-value" id="today-purchase">₹0</div>
+                <div class="stat-label">Today's Purchase</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💵</div>
+                <div class="stat-value" id="today-income">₹0</div>
+                <div class="stat-label">Today's Income</div>
+            </div>
+        </div>
+        
+        <div class="performance-section">
+            <div class="performance-card">
+                <div class="performance-title">🏆 Best Performer of the Day</div>
+                <div class="performance-value" id="best-performer">-</div>
+            </div>
+            <div class="performance-card">
+                <div class="performance-title">⭐ Best Earner of the Day</div>
+                <div class="performance-value" id="best-earner">-</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title">Your Team Structure</h2>
+            <div class="tree" id="team-tree">
+                <!-- Tree will be loaded here -->
+                <p style="text-align: center; color: #666;">Loading team structure...</p>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <p>&copy; 2024 Lira. All rights reserved.</p>
+    </footer>
+    
+    <script src="/script.js"></script>
+</body>
+</html>

@@ -24,40 +24,114 @@ app.use(fileUpload({
 app.use(express.static(path.join(__dirname)));
 
 // Session Store
-const store = new MongoDBStore({
-    uri: process.env.MONGODB_URI,
-    collection: 'sessions'
-});
+let store;
+try {
+    store = new MongoDBStore({
+        uri: process.env.MONGODB_URI,
+        collection: 'sessions'
+    });
+} catch (err) {
+    console.error('❌ Session store error:', err);
+}
 
 app.use(session({
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || 'fallback_secret_key',
     resave: false,
     saveUninitialized: false,
     store: store,
     cookie: { maxAge: 1000 * 60 * 60 * 24 }
 }));
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => {
-    console.log('✅ MongoDB Connected Successfully');
-    initializeDatabase();
-}).catch(err => {
-    console.error('❌ MongoDB Connection Error:', err);
-});
+// ==================== DEBUGGING ====================
+console.log('🔍========== DEBUG INFORMATION ==========');
+console.log('📦 Node Version:', process.version);
+console.log('📂 Current Directory:', __dirname);
+console.log('🔧 Environment Variables:');
+console.log('  - PORT:', process.env.PORT);
+console.log('  - MONGODB_URI:', process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 50) + '...' : '❌ NOT SET');
+console.log('  - JWT_SECRET:', process.env.JWT_SECRET ? '✅ SET' : '❌ NOT SET');
+console.log('  - SESSION_SECRET:', process.env.SESSION_SECRET ? '✅ SET' : '❌ NOT SET');
+console.log('  - BREVO_API_KEY:', process.env.BREVO_API_KEY ? '✅ SET' : '❌ NOT SET');
+console.log('  - EMAIL_USER:', process.env.EMAIL_USER || '❌ NOT SET');
+console.log('  - EMAIL_FROM:', process.env.EMAIL_FROM || '❌ NOT SET');
+console.log('=========================================');
+
+// ==================== MongoDB Connection with Retry ====================
+const connectWithRetry = async () => {
+    console.log('🔄 Attempting to connect to MongoDB...');
+    
+    if (!process.env.MONGODB_URI) {
+        console.error('❌ MONGODB_URI environment variable is not set!');
+        return;
+    }
+
+    const maxRetries = 5;
+    let retries = 0;
+
+    const connect = async () => {
+        try {
+            await mongoose.connect(process.env.MONGODB_URI, {
+                useNewUrlParser: true,
+                useUnifiedTopology: true,
+                serverSelectionTimeoutMS: 10000, // Timeout after 10 seconds
+                socketTimeoutMS: 45000, // Close sockets after 45 seconds
+            });
+            
+            console.log('✅✅✅ MongoDB Connected Successfully! ✅✅✅');
+            console.log('📊 Database:', mongoose.connection.name);
+            console.log('📊 Host:', mongoose.connection.host);
+            console.log('📊 Port:', mongoose.connection.port);
+            
+            initializeDatabase();
+            
+        } catch (err) {
+            console.error('❌❌❌ MongoDB Connection Error ❌❌❌');
+            console.error('Error Name:', err.name);
+            console.error('Error Message:', err.message);
+            console.error('Error Code:', err.code);
+            
+            if (err.name === 'MongoNetworkError') {
+                console.error('🌐 Network Error - Check MongoDB Atlas Network Access');
+                console.error('   ➡️ Go to MongoDB Atlas -> Network Access -> Add IP 0.0.0.0/0');
+            } else if (err.name === 'MongooseServerSelectionError') {
+                console.error('🖥️ Server Selection Error - Check if cluster is running');
+            } else if (err.name === 'MongoAuthenticationError') {
+                console.error('🔑 Authentication Error - Check username/password');
+            }
+            
+            if (retries < maxRetries) {
+                retries++;
+                const delay = Math.pow(2, retries) * 1000; // Exponential backoff
+                console.log(`🔄 Retrying connection in ${delay/1000} seconds... (Attempt ${retries}/${maxRetries})`);
+                setTimeout(connect, delay);
+            } else {
+                console.error('❌ Max retries reached. Exiting...');
+            }
+        }
+    };
+
+    await connect();
+};
+
+// Start connection
+connectWithRetry();
 
 // Email Configuration
-const transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 587,
-    secure: false,
-    auth: {
-        user: 'global.business.lira@gmail.com',
-        pass: process.env.BREVO_API_KEY
-    }
-});
+let transporter;
+try {
+    transporter = nodemailer.createTransport({
+        host: 'smtp-relay.brevo.com',
+        port: 587,
+        secure: false,
+        auth: {
+            user: 'global.business.lira@gmail.com',
+            pass: process.env.BREVO_API_KEY
+        }
+    });
+    console.log('✅ Email transporter configured');
+} catch (err) {
+    console.error('❌ Email configuration error:', err);
+}
 
 // ==================== SCHEMAS ====================
 
@@ -259,6 +333,15 @@ const FranchiseSettings = mongoose.model('FranchiseSettings', FranchiseSettingsS
 
 async function initializeDatabase() {
     try {
+        console.log('📦 Initializing database with default data...');
+        
+        // Check if already initialized
+        const settings = await Settings.findOne({ key: 'initialized' });
+        if (settings) {
+            console.log('✅ Database already initialized');
+            return;
+        }
+        
         // Create default company details
         const companyExists = await CompanyDetails.findOne();
         if (!companyExists) {
@@ -275,20 +358,21 @@ async function initializeDatabase() {
 
         // Create default categories
         const categories = [
-            { name: 'Gold', type: 'gram', purchaseRate: 5000, makingPacking: 500 },
-            { name: 'Silver', type: 'gram', purchaseRate: 60, makingPacking: 20 },
-            { name: 'Diamond', type: 'gram', purchaseRate: 30000, makingPacking: 2000 },
-            { name: 'Platinum', type: 'gram', purchaseRate: 25000, makingPacking: 1500 },
-            { name: "Men's Wear", type: 'piece', purchaseRate: 1000, makingPacking: 200 },
-            { name: "Women's Wear", type: 'piece', purchaseRate: 1500, makingPacking: 300 },
-            { name: "Kid's Wear", type: 'piece', purchaseRate: 500, makingPacking: 100 },
-            { name: 'Electronics', type: 'piece', purchaseRate: 10000, makingPacking: 500 }
+            { name: 'Gold', type: 'gram', purchaseRate: 5000, makingPacking: 500, expense: 100, deliveryCharge: 50, franchiseCharge: 100, franchisePool: 50, generalPool: 25 },
+            { name: 'Silver', type: 'gram', purchaseRate: 60, makingPacking: 20, expense: 10, deliveryCharge: 30, franchiseCharge: 15, franchisePool: 10, generalPool: 5 },
+            { name: 'Diamond', type: 'gram', purchaseRate: 30000, makingPacking: 2000, expense: 500, deliveryCharge: 200, franchiseCharge: 500, franchisePool: 200, generalPool: 100 },
+            { name: 'Platinum', type: 'gram', purchaseRate: 25000, makingPacking: 1500, expense: 400, deliveryCharge: 150, franchiseCharge: 400, franchisePool: 150, generalPool: 75 },
+            { name: "Men's Wear", type: 'piece', purchaseRate: 1000, makingPacking: 200, expense: 50, deliveryCharge: 40, franchiseCharge: 50, franchisePool: 30, generalPool: 15 },
+            { name: "Women's Wear", type: 'piece', purchaseRate: 1500, makingPacking: 300, expense: 75, deliveryCharge: 40, franchiseCharge: 75, franchisePool: 40, generalPool: 20 },
+            { name: "Kid's Wear", type: 'piece', purchaseRate: 500, makingPacking: 100, expense: 25, deliveryCharge: 40, franchiseCharge: 25, franchisePool: 20, generalPool: 10 },
+            { name: 'Electronics', type: 'piece', purchaseRate: 10000, makingPacking: 500, expense: 200, deliveryCharge: 100, franchiseCharge: 200, franchisePool: 100, generalPool: 50 }
         ];
 
         for (let cat of categories) {
             const exists = await Category.findOne({ name: cat.name });
             if (!exists) {
                 await Category.create(cat);
+                console.log(`  ✅ Category created: ${cat.name}`);
             }
         }
         console.log('✅ Default categories created');
@@ -304,12 +388,18 @@ async function initializeDatabase() {
                 mobile: '9999999999',
                 email: 'admin@lira.com',
                 password: hashedPassword,
-                active: true
+                active: true,
+                wallet: 100000 // Admin ko starting balance
             });
             console.log('✅ Admin user created');
         }
+
+        // Mark as initialized
+        await Settings.create({ key: 'initialized', value: true });
+        console.log('✅ Database initialization complete!');
+        
     } catch (error) {
-        console.error('Database initialization error:', error);
+        console.error('❌ Database initialization error:', error);
     }
 }
 
@@ -338,14 +428,25 @@ const adminMiddleware = async (req, res, next) => {
 
 const sendEmail = async (to, subject, templateFile, replacements) => {
     try {
-        let template = fs.readFileSync(path.join(__dirname, templateFile), 'utf8');
+        if (!transporter) {
+            console.log('⚠️ Email transporter not configured, skipping email');
+            return false;
+        }
+        
+        const templatePath = path.join(__dirname, templateFile);
+        if (!fs.existsSync(templatePath)) {
+            console.log(`⚠️ Email template ${templateFile} not found`);
+            return false;
+        }
+        
+        let template = fs.readFileSync(templatePath, 'utf8');
         
         for (let key in replacements) {
             template = template.replace(new RegExp(`{{${key}}}`, 'g'), replacements[key]);
         }
         
         const mailOptions = {
-            from: process.env.EMAIL_FROM,
+            from: process.env.EMAIL_FROM || 'Lira <global.business.lira@gmail.com>',
             to: to,
             subject: subject,
             html: template
@@ -533,6 +634,15 @@ const managePools = async (purchase, user) => {
 };
 
 // ==================== API ROUTES ====================
+
+// Health Check Route
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: 'OK', 
+        time: new Date().toISOString(),
+        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    });
+});
 
 // Generate Invoice Number
 function generateInvoiceNumber() {
@@ -838,17 +948,6 @@ app.post('/api/purchase', authMiddleware, async (req, res) => {
                 await purchase.save();
             }
         }
-        
-        const invoiceHTML = `
-            <h2>Lira Invoice</h2>
-            <p>Invoice No: ${purchase.invoiceNumber}</p>
-            <p>Date: ${moment().format('DD-MM-YYYY')}</p>
-            <table border="1" cellpadding="5">
-                <tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr>
-                ${purchaseProducts.map(p => `<tr><td>${p.name}</td><td>${p.quantity}</td><td>₹${p.price}</td><td>₹${p.price * p.quantity}</td></tr>`).join('')}
-                <tr><td colspan="3" align="right">Total:</td><td>₹${totalAmount}</td></tr>
-            </table>
-        `;
         
         await sendEmail(
             req.user.email,
@@ -1408,6 +1507,7 @@ app.post('/api/admin/deduct-fund/:userId', adminMiddleware, async (req, res) => 
 // ==================== START SERVER ====================
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🌎 Health check: http://localhost:${PORT}/health`);
 });

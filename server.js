@@ -1,39 +1,41 @@
-// Lira - Main Server File
 const express = require('express');
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 const session = require('express-session');
-const MongoStore = require('connect-mongo');
+const MongoDBStore = require('connect-mongodb-session')(session);
 const cors = require('cors');
 const path = require('path');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const multer = require('multer');
-const sharp = require('sharp');
+const fs = require('fs');
 const nodemailer = require('nodemailer');
-const QRCode = require('qrcode');
-const helmet = require('helmet');
-const compression = require('compression');
-const rateLimit = require('express-rate-limit');
+const moment = require('moment');
+const fileUpload = require('express-fileupload');
 require('dotenv').config();
 
 const app = express();
 
-// Security Middleware
-app.use(helmet({
-    contentSecurityPolicy: false,
-}));
-app.use(compression());
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(fileUpload({
+    limits: { fileSize: 50 * 1024 * 1024 },
+    createParentPath: true
+}));
 app.use(express.static(path.join(__dirname)));
 
-// Rate Limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100
+// Session Store
+const store = new MongoDBStore({
+    uri: process.env.MONGODB_URI,
+    collection: 'sessions'
 });
-app.use('/api/', limiter);
+
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: store,
+    cookie: { maxAge: 1000 * 60 * 60 * 24 }
+}));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, {
@@ -41,466 +43,610 @@ mongoose.connect(process.env.MONGODB_URI, {
     useUnifiedTopology: true
 }).then(() => {
     console.log('✅ MongoDB Connected Successfully');
-    initializeAdmin();
+    initializeDatabase();
 }).catch(err => {
     console.error('❌ MongoDB Connection Error:', err);
-    process.exit(1);
 });
 
-// Session Configuration
-app.use(session({
-    secret: process.env.JWT_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI,
-        collectionName: 'sessions'
-    }),
-    cookie: {
-        maxAge: 1000 * 60 * 60 * 24 * 7,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production'
-    }
-}));
-
-// Email Transporter (Brevo)
+// Email Configuration
 const transporter = nodemailer.createTransport({
     host: 'smtp-relay.brevo.com',
     port: 587,
     secure: false,
     auth: {
-        user: process.env.EMAIL_FROM,
+        user: 'global.business.lira@gmail.com',
         pass: process.env.BREVO_API_KEY
     }
 });
 
-// ============= SCHEMAS =============
-// User Schema
-const userSchema = new mongoose.Schema({
-    userId: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    sponsorId: { type: String, required: true },
-    name: { type: String, required: true },
-    mobile: { type: String, required: true, unique: true },
-    email: { type: String, required: true, unique: true },
-    pincode: { type: String, required: true },
-    position: { type: String, enum: ['L1', 'L2', 'L3', 'L4', 'L5'], required: true },
-    parentId: { type: String },
-    level: { type: Number, default: 1 },
-    treePath: { type: String },
-    isActive: { type: Boolean, default: false },
-    activeUntil: { type: Date },
-    isFranchise: { type: Boolean, default: false },
-    franchisePincode: { type: String },
-    wallet: { type: Number, default: 0 },
-    wallet12Month: { type: Number, default: 0 },
-    monthlyAdditions: [{
-        month: Number,
-        year: Number,
-        amount: Number,
-        date: Date
-    }],
-    birthDate: { type: Date },
-    anniversaryDate: { type: Date },
-    createdAt: { type: Date, default: Date.now },
-    lastLogin: { type: Date },
-    status: { type: String, enum: ['active', 'inactive', 'blocked'], default: 'active' }
-});
+// ==================== SCHEMAS ====================
 
 // Category Schema
-const categorySchema = new mongoose.Schema({
+const CategorySchema = new mongoose.Schema({
     name: { type: String, required: true },
-    type: { type: String, enum: ['jewelry', 'clothing', 'electronics'], required: true },
-    perGramRate: { type: Number, default: 0 },
-    perPieceRate: { type: Number, default: 0 },
-    expense: { type: Number, required: true },
-    makingPacking: { type: Number, required: true },
-    deliveryCharge: { type: Number, required: true },
-    franchiseCharge: { type: Number, required: true },
-    franchisePool: { type: Number, required: true },
-    generalPool: { type: Number, required: true },
-    gstPercent: { type: Number, required: true },
+    type: { type: String, enum: ['gram', 'piece'], required: true },
+    purchaseRate: { type: Number, default: 0 },
+    expense: { type: Number, default: 0 },
+    makingPacking: { type: Number, default: 0 },
+    deliveryCharge: { type: Number, default: 0 },
+    franchiseCharge: { type: Number, default: 0 },
+    franchisePool: { type: Number, default: 0 },
+    generalPool: { type: Number, default: 0 },
+    gst: { type: Number, default: 18 },
     createdAt: { type: Date, default: Date.now }
 });
 
 // Product Schema
-const productSchema = new mongoose.Schema({
+const ProductSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
-    categoryName: String,
-    type: String,
-    gram: Number,
-    size: String,
-    purchaseRate: Number,
-    expense: Number,
-    makingPacking: Number,
-    deliveryCharge: Number,
-    franchiseCharge: Number,
-    franchisePool: Number,
-    generalPool: Number,
-    gstPercent: Number,
-    gstAmount: Number,
-    payableAmount: Number,
-    stock: { type: Number, default: 0 },
-    images: [String],
-    description: String,
-    status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+    category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
+    gram: { type: Number, default: 0 },
+    size: { type: String, default: '' },
+    purchaseRate: { type: Number, default: 0 },
+    expense: { type: Number, default: 0 },
+    makingPacking: { type: Number, default: 0 },
+    deliveryCharge: { type: Number, default: 0 },
+    franchiseCharge: { type: Number, default: 0 },
+    franchisePool: { type: Number, default: 0 },
+    generalPool: { type: Number, default: 0 },
+    gst: { type: Number, default: 18 },
+    totalPayable: { type: Number, default: 0 },
+    stock: { type: Number, default: 1000 },
+    image: { type: String, default: '/default-product.jpg' },
+    description: { type: String },
     createdAt: { type: Date, default: Date.now }
 });
 
-// Order Schema
-const orderSchema = new mongoose.Schema({
-    orderId: { type: String, required: true, unique: true },
+// User Schema
+const UserSchema = new mongoose.Schema({
+    sponsorId: { type: String, required: true },
+    userId: { type: String, required: true, unique: true },
+    username: { type: String, required: true },
+    mobile: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    position: { type: Number },
+    parentId: { type: String },
+    level: { type: Number, default: 1 },
+    active: { type: Boolean, default: false },
+    activeUntil: { type: Date },
+    isFranchise: { type: Boolean, default: false },
+    franchisePincode: { type: String },
+    wallet: { type: Number, default: 0 },
+    monthWallet: { type: Number, default: 0 },
+    monthWalletHistory: [{
+        month: Number,
+        year: Number,
+        amount: Number,
+        addedAt: { type: Date, default: Date.now }
+    }],
+    totalPurchase: { type: Number, default: 0 },
+    totalIncome: { type: Number, default: 0 },
+    directCount: { type: Number, default: 0 },
+    birthdate: { type: Date },
+    anniversary: { type: Date },
+    createdAt: { type: Date, default: Date.now }
+});
+
+// Fund Request Schema
+const FundRequestSchema = new mongoose.Schema({
     userId: { type: String, required: true },
-    userName: String,
-    userMobile: String,
-    userPincode: String,
-    franchiseId: String,
-    franchiseName: String,
-    items: [{
-        productId: mongoose.Schema.Types.ObjectId,
-        productName: String,
-        category: String,
+    name: { type: String, required: true },
+    amount: { type: Number, required: true },
+    utr: { type: String, required: true },
+    description: { type: String },
+    screenshot: { type: String },
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now },
+    approvedAt: { type: Date }
+});
+
+// Purchase Schema
+const PurchaseSchema = new mongoose.Schema({
+    userId: { type: String, required: true },
+    products: [{
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+        name: String,
         quantity: Number,
         price: Number,
         makingPacking: Number,
+        franchiseCharge: Number,
         deliveryCharge: Number,
-        franchiseCharge: Number
+        franchisePool: Number,
+        generalPool: Number
     }],
-    totalAmount: Number,
-    makingPackingTotal: Number,
-    deliveryTotal: Number,
-    franchiseChargeTotal: Number,
-    gstAmount: Number,
-    payableAmount: Number,
-    paymentMethod: { type: String, enum: ['wallet', 'bank', '12month'] },
-    paymentProof: String,
-    utrNumber: String,
-    bankDetails: String,
-    orderType: { type: String, enum: ['regular', 'franchise', 'repurchase'] },
-    status: { 
-        type: String, 
-        enum: ['pending', 'approved', 'rejected', 'processing', 'shipped', 'delivered', 'cancelled'],
-        default: 'pending'
-    },
-    deliveryStatus: { type: String, enum: ['pending', 'assigned', 'picked', 'delivered'], default: 'pending' },
-    assignedFranchise: String,
-    deliveryDate: Date,
+    totalAmount: { type: Number, required: true },
+    type: { type: String, enum: ['regular', 'franchise', 'monthWallet'], default: 'regular' },
+    franchisePincode: { type: String },
+    assignedFranchise: { type: String },
+    deliveryStatus: { type: String, enum: ['pending', 'assigned', 'delivered'], default: 'pending' },
+    deliveryCharge: { type: Number, default: 0 },
+    invoiceNumber: { type: String, unique: true },
     createdAt: { type: Date, default: Date.now },
-    approvedAt: Date,
-    deliveredAt: Date
-});
-
-// Transaction Schema
-const transactionSchema = new mongoose.Schema({
-    transactionId: { type: String, required: true, unique: true },
-    userId: { type: String, required: true },
-    type: { 
-        type: String, 
-        enum: ['add_fund', 'deduct', 'purchase', 'income', 'payout', 'activation', '12month_add', '12month_use']
-    },
-    amount: Number,
-    balance: Number,
-    description: String,
-    referenceId: String,
-    status: { type: String, enum: ['pending', 'completed', 'failed', 'rejected'], default: 'completed' },
-    createdAt: { type: Date, default: Date.now }
+    deliveredAt: { type: Date }
 });
 
 // Income Schema
-const incomeSchema = new mongoose.Schema({
+const IncomeSchema = new mongoose.Schema({
     userId: { type: String, required: true },
-    fromUserId: String,
-    orderId: String,
-    level: Number,
-    amount: Number,
-    type: { type: String, enum: ['level', 'franchise', 'pool'] },
-    status: { type: String, enum: ['pending', 'credited', 'skipped'], default: 'pending' },
-    createdAt: { type: Date, default: Date.now },
-    creditedAt: Date
-});
-
-// Payout Schema
-const payoutSchema = new mongoose.Schema({
-    payoutId: { type: String, required: true, unique: true },
-    userId: { type: String, required: true },
-    amount: Number,
-    tdsPercent: Number,
-    adminChargePercent: Number,
-    tdsAmount: Number,
-    adminChargeAmount: Number,
-    netAmount: Number,
-    bankDetails: Object,
-    status: { type: String, enum: ['pending', 'approved', 'rejected', 'paid'], default: 'pending' },
-    approvedBy: String,
-    approvedAt: Date,
-    paidAt: Date,
+    fromUserId: { type: String },
+    purchaseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Purchase' },
+    level: { type: Number },
+    amount: { type: Number, required: true },
+    type: { type: String, enum: ['level', 'franchise', 'pool', 'welcome'] },
+    status: { type: String, enum: ['pending', 'credited', 'lapsed'], default: 'credited' },
     createdAt: { type: Date, default: Date.now }
 });
 
 // Pool Schema
-const poolSchema = new mongoose.Schema({
+const PoolSchema = new mongoose.Schema({
     type: { type: String, enum: ['franchise', 'general'], required: true },
     members: [{
         userId: String,
-        name: String,
-        joinDate: Date,
-        totalPurchase: Number,
-        poolShare: Number,
+        username: String,
+        joinedAt: Date,
+        purchaseAmount: Number,
         status: { type: String, enum: ['active', 'exited'], default: 'active' },
-        exitDate: Date
+        exitedAt: Date
     }],
     totalFund: { type: Number, default: 0 },
-    distributionType: { type: String, enum: ['percentage', 'equal'], default: 'percentage' },
-    maxMembers: { type: Number, default: 100 },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
 
+// Payout Schema
+const PayoutSchema = new mongoose.Schema({
+    userId: { type: String, required: true },
+    amount: { type: Number, required: true },
+    adminCharge: { type: Number, default: 5 },
+    gst: { type: Number, default: 18 },
+    netAmount: { type: Number },
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now },
+    processedAt: { type: Date }
+});
+
 // Settings Schema
-const settingsSchema = new mongoose.Schema({
+const SettingsSchema = new mongoose.Schema({
     key: { type: String, required: true, unique: true },
-    value: mongoose.Schema.Types.Mixed,
+    value: mongoose.Schema.Types.Mixed
+});
+
+// OTP Schema
+const OTPSchema = new mongoose.Schema({
+    email: { type: String, required: true },
+    otp: { type: String, required: true },
+    expiresAt: { type: Date, default: Date.now, index: { expires: '10m' } }
+});
+
+// Company Details Schema
+const CompanyDetailsSchema = new mongoose.Schema({
+    bankName: { type: String, default: 'HDFC Bank' },
+    accountNumber: { type: String, default: '50100501234567' },
+    ifscCode: { type: String, default: 'HDFC0001234' },
+    accountHolder: { type: String, default: 'Lira Business Solutions' },
+    upiId: { type: String, default: 'lira@hdfcbank' },
+    qrCode: { type: String },
     updatedAt: { type: Date, default: Date.now }
 });
 
-// Models
-const User = mongoose.model('User', userSchema);
-const Category = mongoose.model('Category', categorySchema);
-const Product = mongoose.model('Product', productSchema);
-const Order = mongoose.model('Order', orderSchema);
-const Transaction = mongoose.model('Transaction', transactionSchema);
-const Income = mongoose.model('Income', incomeSchema);
-const Payout = mongoose.model('Payout', payoutSchema);
-const Pool = mongoose.model('Pool', poolSchema);
-const Settings = mongoose.model('Settings', settingsSchema);
+// Franchise Settings Schema
+const FranchiseSettingsSchema = new mongoose.Schema({
+    maxFranchisePerPincode: { type: Number, default: 1 },
+    defaultFranchise: { type: String },
+    welcomeBonus: { type: Number, default: 10 },
+    poolDistributionType: { type: String, enum: ['percentage', 'equal'], default: 'equal' },
+    poolExitAmount: { type: Number, default: 10000 },
+    levelDistribution: { type: Number, default: 10 },
+    createdAt: { type: Date, default: Date.now }
+});
 
-// Initialize Admin
-async function initializeAdmin() {
+// Models
+const Category = mongoose.model('Category', CategorySchema);
+const Product = mongoose.model('Product', ProductSchema);
+const User = mongoose.model('User', UserSchema);
+const FundRequest = mongoose.model('FundRequest', FundRequestSchema);
+const Purchase = mongoose.model('Purchase', PurchaseSchema);
+const Income = mongoose.model('Income', IncomeSchema);
+const Pool = mongoose.model('Pool', PoolSchema);
+const Payout = mongoose.model('Payout', PayoutSchema);
+const Settings = mongoose.model('Settings', SettingsSchema);
+const OTP = mongoose.model('OTP', OTPSchema);
+const CompanyDetails = mongoose.model('CompanyDetails', CompanyDetailsSchema);
+const FranchiseSettings = mongoose.model('FranchiseSettings', FranchiseSettingsSchema);
+
+// ==================== INITIALIZE DATABASE ====================
+
+async function initializeDatabase() {
     try {
-        const adminExists = await User.findOne({ userId: 'ADMIN001' });
+        // Create default company details
+        const companyExists = await CompanyDetails.findOne();
+        if (!companyExists) {
+            await CompanyDetails.create({});
+            console.log('✅ Default company details created');
+        }
+
+        // Create default franchise settings
+        const franchiseSettingsExists = await FranchiseSettings.findOne();
+        if (!franchiseSettingsExists) {
+            await FranchiseSettings.create({});
+            console.log('✅ Default franchise settings created');
+        }
+
+        // Create default categories
+        const categories = [
+            { name: 'Gold', type: 'gram', purchaseRate: 5000, makingPacking: 500 },
+            { name: 'Silver', type: 'gram', purchaseRate: 60, makingPacking: 20 },
+            { name: 'Diamond', type: 'gram', purchaseRate: 30000, makingPacking: 2000 },
+            { name: 'Platinum', type: 'gram', purchaseRate: 25000, makingPacking: 1500 },
+            { name: "Men's Wear", type: 'piece', purchaseRate: 1000, makingPacking: 200 },
+            { name: "Women's Wear", type: 'piece', purchaseRate: 1500, makingPacking: 300 },
+            { name: "Kid's Wear", type: 'piece', purchaseRate: 500, makingPacking: 100 },
+            { name: 'Electronics', type: 'piece', purchaseRate: 10000, makingPacking: 500 }
+        ];
+
+        for (let cat of categories) {
+            const exists = await Category.findOne({ name: cat.name });
+            if (!exists) {
+                await Category.create(cat);
+            }
+        }
+        console.log('✅ Default categories created');
+
+        // Create admin user
+        const adminExists = await User.findOne({ userId: 'admin' });
         if (!adminExists) {
-            const hashedPassword = await bcrypt.hash('ADMIN001', 10);
-            const admin = new User({
-                userId: 'ADMIN001',
+            const hashedPassword = await bcrypt.hash('admin123', 10);
+            await User.create({
+                sponsorId: 'admin',
+                userId: 'admin',
+                username: 'Administrator',
+                mobile: '9999999999',
+                email: 'admin@lira.com',
                 password: hashedPassword,
-                sponsorId: 'SYSTEM',
-                name: 'Administrator',
-                mobile: process.env.ADMIN_PHONE,
-                email: process.env.ADMIN_EMAIL,
-                pincode: '110001',
-                position: 'L1',
-                isActive: true,
-                isFranchise: true,
-                wallet: 1000000
+                active: true
             });
-            await admin.save();
-            console.log('✅ Admin Created Successfully');
+            console.log('✅ Admin user created');
         }
     } catch (error) {
-        console.error('Admin Creation Error:', error);
+        console.error('Database initialization error:', error);
     }
 }
 
-// ============= MIDDLEWARE =============
+// ==================== MIDDLEWARE ====================
+
 const authMiddleware = async (req, res, next) => {
-    try {
-        const token = req.headers.authorization?.split(' ')[1] || req.session.token;
-        if (!token) {
-            return res.status(401).json({ success: false, message: 'Unauthorized' });
-        }
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.userId = decoded.userId;
-        next();
-    } catch (error) {
-        res.status(401).json({ success: false, message: 'Invalid token' });
+    if (!req.session.userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
     }
+    const user = await User.findOne({ userId: req.session.userId });
+    if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+    }
+    req.user = user;
+    next();
 };
 
 const adminMiddleware = async (req, res, next) => {
+    if (req.session.userId !== 'admin') {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    next();
+};
+
+// ==================== EMAIL FUNCTIONS ====================
+
+const sendEmail = async (to, subject, templateFile, replacements) => {
     try {
-        const user = await User.findOne({ userId: req.userId });
-        if (!user || user.userId !== 'ADMIN001') {
-            return res.status(403).json({ success: false, message: 'Access denied' });
+        let template = fs.readFileSync(path.join(__dirname, templateFile), 'utf8');
+        
+        for (let key in replacements) {
+            template = template.replace(new RegExp(`{{${key}}}`, 'g'), replacements[key]);
         }
-        next();
+        
+        const mailOptions = {
+            from: process.env.EMAIL_FROM,
+            to: to,
+            subject: subject,
+            html: template
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Email sent to ${to}`);
+        return true;
     } catch (error) {
-        res.status(403).json({ success: false, message: 'Access denied' });
+        console.error('❌ Email sending failed:', error);
+        return false;
     }
 };
 
-// ============= EMAIL FUNCTIONS =============
-async function sendEmail(to, subject, html) {
-    try {
-        const mailOptions = {
-            from: `"${process.env.EMAIL_NAME}" <${process.env.EMAIL_FROM}>`,
-            to: to,
-            subject: subject,
-            html: html
-        };
-        await transporter.sendMail(mailOptions);
-        return true;
-    } catch (error) {
-        console.error('Email Error:', error);
-        return false;
+// ==================== TREE FUNCTIONS ====================
+
+const findPositionInTree = async (sponsorId) => {
+    const sponsor = await User.findOne({ userId: sponsorId });
+    if (!sponsor) return null;
+    
+    for (let i = 1; i <= 5; i++) {
+        const existing = await User.findOne({ parentId: sponsorId, position: i });
+        if (!existing) {
+            return { parentId: sponsorId, position: i, level: sponsor.level + 1 };
+        }
     }
+    
+    const children = await User.find({ parentId: sponsorId }).sort({ position: 1 });
+    for (let child of children) {
+        const result = await findPositionInTree(child.userId);
+        if (result) return result;
+    }
+    
+    return null;
+};
+
+// ==================== INCOME DISTRIBUTION ====================
+
+const distributeIncome = async (purchase) => {
+    const user = await User.findOne({ userId: purchase.userId });
+    if (!user) return;
+    
+    if (!user.active) {
+        user.active = true;
+        user.activeUntil = moment().add(30, 'days').toDate();
+        await user.save();
+    }
+    
+    const settings = await FranchiseSettings.findOne() || { levelDistribution: 10 };
+    const maxLevel = settings.levelDistribution;
+    
+    let currentUser = user;
+    let level = 1;
+    
+    while (currentUser && level <= maxLevel) {
+        const parent = await User.findOne({ userId: currentUser.parentId });
+        if (!parent) break;
+        
+        if (parent.active) {
+            if (level <= 5 || parent.directCount >= 11) {
+                const incomeAmount = purchase.products.reduce((sum, p) => sum + (p.makingPacking * 0.1 * p.quantity), 0);
+                
+                const income = new Income({
+                    userId: parent.userId,
+                    fromUserId: user.userId,
+                    purchaseId: purchase._id,
+                    level: level,
+                    amount: incomeAmount,
+                    type: 'level'
+                });
+                await income.save();
+                
+                parent.wallet += incomeAmount;
+                parent.totalIncome += incomeAmount;
+                await parent.save();
+                
+                await sendEmail(
+                    parent.email,
+                    '🎉 Income Credited - Lira',
+                    'income-received-email.html',
+                    {
+                        name: parent.username,
+                        amount: incomeAmount.toFixed(2),
+                        from: user.username,
+                        level: level,
+                        date: moment().format('DD-MM-YYYY'),
+                        time: moment().format('hh:mm A')
+                    }
+                );
+            }
+        } else {
+            const income = new Income({
+                userId: parent.userId,
+                fromUserId: user.userId,
+                purchaseId: purchase._id,
+                level: level,
+                amount: 0,
+                type: 'level',
+                status: 'lapsed'
+            });
+            await income.save();
+            
+            await sendEmail(
+                parent.email,
+                '⚠️ Income Lapsed - Lira',
+                'income-lapse-email.html',
+                {
+                    name: parent.username,
+                    level: level,
+                    date: moment().format('DD-MM-YYYY')
+                }
+            );
+        }
+        
+        currentUser = parent;
+        level++;
+    }
+};
+
+// ==================== POOL MANAGEMENT ====================
+
+const managePools = async (purchase, user) => {
+    try {
+        if (user.isFranchise) {
+            let franchisePool = await Pool.findOne({ type: 'franchise' });
+            if (!franchisePool) {
+                franchisePool = new Pool({ type: 'franchise', members: [] });
+            }
+            
+            const franchiseSettings = await FranchiseSettings.findOne() || { 
+                poolDistributionType: 'equal', 
+                poolExitAmount: 10000 
+            };
+            
+            const existingMember = franchisePool.members.find(m => m.userId === user.userId && m.status === 'active');
+            
+            const franchiseCharges = purchase.products.reduce((sum, p) => sum + (p.franchisePool * p.quantity), 0);
+            franchisePool.totalFund += franchiseCharges;
+            
+            if (!existingMember) {
+                franchisePool.members.push({
+                    userId: user.userId,
+                    username: user.username,
+                    joinedAt: new Date(),
+                    purchaseAmount: purchase.totalAmount
+                });
+            } else {
+                existingMember.purchaseAmount += purchase.totalAmount;
+                
+                if (existingMember.purchaseAmount >= franchiseSettings.poolExitAmount) {
+                    existingMember.status = 'exited';
+                    existingMember.exitedAt = new Date();
+                }
+            }
+            
+            await franchisePool.save();
+        }
+        
+        // General Pool
+        let generalPool = await Pool.findOne({ type: 'general' });
+        if (!generalPool) {
+            generalPool = new Pool({ type: 'general', members: [] });
+        }
+        
+        const generalCharges = purchase.products.reduce((sum, p) => sum + (p.generalPool * p.quantity), 0);
+        generalPool.totalFund += generalCharges;
+        
+        const existingGeneral = generalPool.members.find(m => m.userId === user.userId && m.status === 'active');
+        
+        if (!existingGeneral && generalPool.members.length < 100) {
+            generalPool.members.push({
+                userId: user.userId,
+                username: user.username,
+                joinedAt: new Date(),
+                purchaseAmount: purchase.totalAmount
+            });
+        } else if (existingGeneral) {
+            existingGeneral.purchaseAmount += purchase.totalAmount;
+        }
+        
+        await generalPool.save();
+    } catch (error) {
+        console.error('Pool management error:', error);
+    }
+};
+
+// ==================== API ROUTES ====================
+
+// Generate Invoice Number
+function generateInvoiceNumber() {
+    return 'INV-' + Date.now() + '-' + Math.floor(1000 + Math.random() * 9000);
 }
 
-// Email Templates
-function getWelcomeEmail(name) {
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body { font-family: 'Arial', sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
-                .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center; }
-                .header h1 { color: white; margin: 0; font-size: 36px; }
-                .header p { color: rgba(255,255,255,0.9); font-size: 18px; margin-top: 10px; }
-                .content { padding: 40px; }
-                .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; }
-                .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>✨ Lira</h1>
-                    <p>Welcome to the Family!</p>
-                </div>
-                <div class="content">
-                    <h2>Welcome ${name}!</h2>
-                    <p>Thank you for joining Lira. We're excited to have you on board!</p>
-                    <p>Your journey to financial freedom starts now.</p>
-                    <a href="#" class="button">Get Started</a>
-                </div>
-                <div class="footer">
-                    <p>&copy; 2026 Lira. All rights reserved.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-    `;
-}
-
-// ============= API ROUTES =============
-
-// 1. Registration with OTP
-const otpStore = new Map();
-
+// Send OTP
 app.post('/api/send-otp', async (req, res) => {
     try {
-        const { email, mobile } = req.body;
+        const { email } = req.body;
         
-        // Check existing user
-        const existingUser = await User.findOne({ $or: [{ email }, { mobile }] });
+        const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ 
-                success: false, 
-                message: existingUser.email === email ? 'Email already registered' : 'Mobile already registered'
-            });
+            return res.status(400).json({ error: 'Email already registered' });
         }
         
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        otpStore.set(email, { otp, expires: Date.now() + 300000 });
         
-        const html = `
-            <div style="font-family: Arial; padding: 20px;">
-                <h2>Email Verification</h2>
-                <p>Your OTP is: <strong style="font-size: 24px; color: #667eea;">${otp}</strong></p>
-                <p>Valid for 5 minutes</p>
-            </div>
-        `;
+        await OTP.deleteMany({ email });
+        await OTP.create({ email, otp });
         
-        await sendEmail(email, 'Lira - Email Verification', html);
+        await sendEmail(
+            email,
+            '🔐 Email Verification - Lira',
+            'welcome-email.html',
+            {
+                name: 'User',
+                otp: otp,
+                year: new Date().getFullYear()
+            }
+        );
+        
         res.json({ success: true, message: 'OTP sent successfully' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-app.post('/api/verify-otp', (req, res) => {
+// Verify OTP
+app.post('/api/verify-otp', async (req, res) => {
     try {
         const { email, otp } = req.body;
-        const stored = otpStore.get(email);
         
-        if (!stored || stored.otp !== otp || stored.expires < Date.now()) {
-            return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+        const otpRecord = await OTP.findOne({ email, otp });
+        if (!otpRecord) {
+            return res.status(400).json({ error: 'Invalid OTP' });
         }
         
-        otpStore.delete(email);
-        res.json({ success: true, message: 'OTP verified' });
+        await OTP.deleteMany({ email });
+        
+        res.json({ success: true, message: 'OTP verified successfully' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
+// Register
 app.post('/api/register', async (req, res) => {
     try {
-        const { sponsorId, name, mobile, email, pincode } = req.body;
+        const { sponsorId, username, mobile, email } = req.body;
         
-        // Check duplicates
-        const existing = await User.findOne({ $or: [{ email }, { mobile }] });
-        if (existing) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email or Mobile already registered' 
-            });
+        const existingMobile = await User.findOne({ mobile });
+        if (existingMobile) {
+            return res.status(400).json({ error: 'Mobile number already registered' });
         }
         
-        // Find position in tree (left to right, top to bottom)
+        const existingEmail = await User.findOne({ email });
+        if (existingEmail) {
+            return res.status(400).json({ error: 'Email already registered' });
+        }
+        
         const sponsor = await User.findOne({ userId: sponsorId });
         if (!sponsor) {
-            return res.status(400).json({ success: false, message: 'Invalid Sponsor ID' });
+            return res.status(400).json({ error: 'Invalid Sponsor ID' });
         }
         
-        // Auto-positioning logic
-        let position = 'L1';
-        let parentId = sponsorId;
-        
-        const children = await User.find({ parentId: sponsorId }).sort({ position: 1 });
-        if (children.length === 0) {
-            position = 'L1';
-        } else if (children.length === 1) {
-            position = 'L2';
-        } else if (children.length === 2) {
-            position = 'L3';
-        } else if (children.length === 3) {
-            position = 'L4';
-        } else if (children.length === 4) {
-            position = 'L5';
-        } else {
-            // Find next available
-            const allUsers = await User.find({}).sort({ createdAt: 1 });
-            for (const user of allUsers) {
-                const userChildren = await User.find({ parentId: user.userId });
-                if (userChildren.length < 5) {
-                    parentId = user.userId;
-                    position = `L${userChildren.length + 1}`;
-                    break;
-                }
-            }
+        const position = await findPositionInTree(sponsorId);
+        if (!position) {
+            return res.status(400).json({ error: 'Tree is full' });
         }
         
         const hashedPassword = await bcrypt.hash(mobile, 10);
-        const newUser = new User({
-            userId: mobile,
-            password: hashedPassword,
+        
+        const user = new User({
             sponsorId,
-            name,
+            userId: mobile,
+            username,
             mobile,
             email,
-            pincode,
-            position,
-            parentId,
-            treePath: sponsor.treePath ? `${sponsor.treePath}/${mobile}` : mobile
+            password: hashedPassword,
+            parentId: position.parentId,
+            position: position.position,
+            level: position.level
         });
         
-        await newUser.save();
+        await user.save();
         
-        // Send welcome email
-        await sendEmail(email, 'Welcome to Lira!', getWelcomeEmail(name));
+        await User.updateOne(
+            { userId: sponsorId },
+            { $inc: { directCount: 1 } }
+        );
+        
+        await sendEmail(
+            email,
+            '🎉 Welcome to Lira Family!',
+            'welcome-email.html',
+            {
+                name: username,
+                userId: mobile,
+                password: mobile,
+                date: moment().format('DD-MM-YYYY'),
+                year: new Date().getFullYear()
+            }
+        );
         
         res.json({ 
             success: true, 
@@ -509,682 +655,759 @@ app.post('/api/register', async (req, res) => {
             password: mobile
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// 2. Login
+// Login
 app.post('/api/login', async (req, res) => {
     try {
         const { userId, password } = req.body;
         
         const user = await User.findOne({ userId });
         if (!user) {
-            return res.status(400).json({ success: false, message: 'Invalid credentials' });
+            return res.status(400).json({ error: 'Invalid User ID' });
         }
         
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
-            return res.status(400).json({ success: false, message: 'Invalid credentials' });
+            return res.status(400).json({ error: 'Invalid password' });
         }
         
-        const token = jwt.sign(
-            { userId: user.userId, name: user.name },
-            process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRE }
-        );
-        
-        req.session.token = token;
         req.session.userId = user.userId;
-        
-        user.lastLogin = new Date();
-        await user.save();
-        
-        res.json({
-            success: true,
-            token,
-            user: {
-                userId: user.userId,
-                name: user.name,
-                mobile: user.mobile,
-                email: user.email,
-                wallet: user.wallet,
-                wallet12Month: user.wallet12Month,
-                isActive: user.isActive,
-                isFranchise: user.isFranchise
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// 3. Add Fund
-app.post('/api/add-fund', authMiddleware, async (req, res) => {
-    try {
-        const { amount, utrNumber, description, paymentProof } = req.body;
-        
-        const user = await User.findOne({ userId: req.userId });
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
-        
-        // Get bank details from settings
-        const bankDetails = await Settings.findOne({ key: 'bank_details' });
-        
-        const order = new Order({
-            orderId: `ADD${Date.now()}`,
-            userId: user.userId,
-            userName: user.name,
-            userMobile: user.mobile,
-            totalAmount: amount,
-            payableAmount: amount,
-            paymentMethod: 'bank',
-            utrNumber,
-            description,
-            paymentProof,
-            bankDetails: bankDetails?.value || {},
-            status: 'pending'
-        });
-        
-        await order.save();
         
         res.json({ 
             success: true, 
-            message: 'Fund request submitted for approval',
-            orderId: order.orderId
+            message: 'Login successful',
+            isAdmin: user.userId === 'admin'
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// 4. Add to 12 Month Wallet
-app.post('/api/add-to-12month', authMiddleware, async (req, res) => {
+// Logout
+app.post('/api/logout', (req, res) => {
+    req.session.destroy();
+    res.json({ success: true });
+});
+
+// Get Current User
+app.get('/api/user', authMiddleware, async (req, res) => {
+    res.json(req.user);
+});
+
+// Add Fund Request
+app.post('/api/add-fund', authMiddleware, async (req, res) => {
+    try {
+        const { name, amount, utr, description } = req.body;
+        let screenshot = '';
+        
+        if (req.files && req.files.screenshot) {
+            const file = req.files.screenshot;
+            const fileName = 'fund-' + Date.now() + '-' + file.name;
+            const uploadPath = path.join(__dirname, fileName);
+            await file.mv(uploadPath);
+            screenshot = '/' + fileName;
+        }
+        
+        const fundRequest = new FundRequest({
+            userId: req.user.userId,
+            name,
+            amount,
+            utr,
+            description,
+            screenshot
+        });
+        
+        await fundRequest.save();
+        
+        await sendEmail(
+            req.user.email,
+            '💰 Fund Request Submitted - Lira',
+            'fund-added-email.html',
+            {
+                name: req.user.username,
+                amount: amount,
+                utr: utr,
+                date: moment().format('DD-MM-YYYY')
+            }
+        );
+        
+        res.json({ success: true, message: 'Fund request submitted' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get Products
+app.get('/api/products', async (req, res) => {
+    try {
+        const products = await Product.find().populate('category');
+        res.json(products);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Purchase Product
+app.post('/api/purchase', authMiddleware, async (req, res) => {
+    try {
+        const { products, type } = req.body;
+        
+        let totalAmount = 0;
+        const purchaseProducts = [];
+        
+        for (let item of products) {
+            const product = await Product.findById(item.productId);
+            if (!product) continue;
+            
+            const price = product.totalPayable * item.quantity;
+            totalAmount += price;
+            
+            purchaseProducts.push({
+                productId: product._id,
+                name: product.name,
+                quantity: item.quantity,
+                price: product.totalPayable,
+                makingPacking: product.makingPacking,
+                franchiseCharge: product.franchiseCharge,
+                deliveryCharge: product.deliveryCharge,
+                franchisePool: product.franchisePool,
+                generalPool: product.generalPool
+            });
+        }
+        
+        let franchisePincode = '';
+        let assignedFranchise = '';
+        
+        if (type !== 'monthWallet') {
+            if (req.user.franchisePincode) {
+                franchisePincode = req.user.franchisePincode;
+                assignedFranchise = req.user.userId;
+            } else {
+                const franchise = await User.findOne({ 
+                    isFranchise: true, 
+                    franchisePincode: req.user.franchisePincode || 'default' 
+                });
+                
+                if (franchise) {
+                    assignedFranchise = franchise.userId;
+                } else {
+                    const defaultFranchise = await User.findOne({ isFranchise: true, franchisePincode: 'default' });
+                    if (defaultFranchise) {
+                        assignedFranchise = defaultFranchise.userId;
+                    }
+                }
+            }
+        }
+        
+        const purchase = new Purchase({
+            userId: req.user.userId,
+            products: purchaseProducts,
+            totalAmount,
+            type,
+            franchisePincode,
+            assignedFranchise,
+            invoiceNumber: generateInvoiceNumber()
+        });
+        
+        await purchase.save();
+        
+        if (type === 'monthWallet') {
+            req.user.monthWallet -= totalAmount;
+        } else {
+            req.user.wallet -= totalAmount;
+        }
+        
+        req.user.totalPurchase += totalAmount;
+        await req.user.save();
+        
+        await distributeIncome(purchase);
+        await managePools(purchase, req.user);
+        
+        if (assignedFranchise) {
+            const franchise = await User.findOne({ userId: assignedFranchise });
+            if (franchise) {
+                const deliveryCharge = purchaseProducts.reduce((sum, p) => sum + (p.deliveryCharge * p.quantity), 0);
+                franchise.wallet += deliveryCharge;
+                await franchise.save();
+                
+                purchase.deliveryCharge = deliveryCharge;
+                purchase.deliveryStatus = 'assigned';
+                await purchase.save();
+            }
+        }
+        
+        const invoiceHTML = `
+            <h2>Lira Invoice</h2>
+            <p>Invoice No: ${purchase.invoiceNumber}</p>
+            <p>Date: ${moment().format('DD-MM-YYYY')}</p>
+            <table border="1" cellpadding="5">
+                <tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+                ${purchaseProducts.map(p => `<tr><td>${p.name}</td><td>${p.quantity}</td><td>₹${p.price}</td><td>₹${p.price * p.quantity}</td></tr>`).join('')}
+                <tr><td colspan="3" align="right">Total:</td><td>₹${totalAmount}</td></tr>
+            </table>
+        `;
+        
+        await sendEmail(
+            req.user.email,
+            '🧾 Purchase Invoice - Lira',
+            'invoice-email.html',
+            {
+                name: req.user.username,
+                invoiceNo: purchase.invoiceNumber,
+                date: moment().format('DD-MM-YYYY'),
+                items: purchaseProducts.map(p => `${p.name} x${p.quantity} - ₹${p.price * p.quantity}`).join('<br>'),
+                total: totalAmount,
+                year: new Date().getFullYear()
+            }
+        );
+        
+        res.json({ 
+            success: true, 
+            message: 'Purchase successful',
+            purchase 
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Activate ID
+app.post('/api/activate', authMiddleware, async (req, res) => {
+    try {
+        if (req.user.wallet < 499) {
+            return res.status(400).json({ error: 'Insufficient balance' });
+        }
+        
+        req.user.wallet -= 499;
+        req.user.active = true;
+        req.user.activeUntil = moment().add(30, 'days').toDate();
+        await req.user.save();
+        
+        res.json({ success: true, message: 'ID activated for 30 days' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Add to Month Wallet
+app.post('/api/add-month-wallet', authMiddleware, async (req, res) => {
     try {
         const { amount } = req.body;
         
-        const user = await User.findOne({ userId: req.userId });
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
+        if (req.user.wallet < amount) {
+            return res.status(400).json({ error: 'Insufficient balance' });
         }
         
-        if (user.wallet < amount) {
-            return res.status(400).json({ success: false, message: 'Insufficient balance' });
+        const now = moment();
+        const month = now.month() + 1;
+        const year = now.year();
+        
+        req.user.wallet -= amount;
+        req.user.monthWallet += amount;
+        
+        req.user.monthWalletHistory.push({
+            month,
+            year,
+            amount
+        });
+        
+        await req.user.save();
+        
+        if (month === 12) {
+            // Notify admin
+            await sendEmail(
+                'admin@lira.com',
+                '📅 12th Month Fund Added',
+                'fund-added-email.html',
+                {
+                    name: 'Admin',
+                    amount: amount,
+                    user: req.user.username,
+                    date: moment().format('DD-MM-YYYY')
+                }
+            );
         }
         
-        const now = new Date();
-        user.wallet -= amount;
-        user.monthlyAdditions.push({
-            month: now.getMonth() + 1,
-            year: now.getFullYear(),
-            amount,
-            date: now
-        });
-        
-        await user.save();
-        
-        const transaction = new Transaction({
-            transactionId: `TXN${Date.now()}`,
-            userId: user.userId,
-            type: '12month_add',
-            amount,
-            balance: user.wallet,
-            description: `Added ₹${amount} to 12 Month Wallet`
-        });
-        await transaction.save();
-        
-        res.json({ 
-            success: true, 
-            message: 'Amount added to 12 Month Wallet',
-            wallet: user.wallet,
-            wallet12Month: user.wallet12Month
-        });
+        res.json({ success: true, message: 'Added to month wallet' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// 5. Activate ID
-app.post('/api/activate-id', authMiddleware, async (req, res) => {
+// Update Profile
+app.post('/api/update-profile', authMiddleware, async (req, res) => {
     try {
-        const user = await User.findOne({ userId: req.userId });
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
+        const { birthdate, anniversary } = req.body;
         
-        if (user.wallet < 499) {
-            return res.status(400).json({ success: false, message: 'Insufficient balance' });
-        }
+        if (birthdate) req.user.birthdate = new Date(birthdate);
+        if (anniversary) req.user.anniversary = new Date(anniversary);
         
-        user.wallet -= 499;
-        user.isActive = true;
-        user.activeUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        await req.user.save();
         
-        await user.save();
-        
-        const transaction = new Transaction({
-            transactionId: `ACT${Date.now()}`,
-            userId: user.userId,
-            type: 'activation',
-            amount: 499,
-            balance: user.wallet,
-            description: 'ID Activated for 30 days'
-        });
-        await transaction.save();
-        
-        res.json({ 
-            success: true, 
-            message: 'ID activated successfully for 30 days',
-            wallet: user.wallet,
-            activeUntil: user.activeUntil
-        });
+        res.json({ success: true, message: 'Profile updated' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// 6. Buy Product
-app.post('/api/buy-product', authMiddleware, async (req, res) => {
+// Get Dashboard Data
+app.get('/api/dashboard', authMiddleware, async (req, res) => {
     try {
-        const { productId, quantity, orderType, paymentMethod, utrNumber, paymentProof } = req.body;
+        const today = moment().startOf('day');
         
-        const user = await User.findOne({ userId: req.userId });
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
-        
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ success: false, message: 'Product not found' });
-        }
-        
-        const totalAmount = product.purchaseRate * quantity;
-        const makingPackingTotal = product.makingPacking * quantity;
-        const deliveryTotal = product.deliveryCharge * quantity;
-        const franchiseChargeTotal = product.franchiseCharge * quantity;
-        const gstAmount = totalAmount * (product.gstPercent / 100);
-        const payableAmount = totalAmount + gstAmount;
-        
-        // Check if user is active, if not, activate
-        if (!user.isActive || user.activeUntil < new Date()) {
-            user.isActive = true;
-            user.activeUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        }
-        
-        // Find franchise for pincode
-        let franchise = await User.findOne({ 
-            isFranchise: true, 
-            franchisePincode: user.pincode 
+        const todayPurchases = await Purchase.find({
+            userId: req.user.userId,
+            createdAt: { $gte: today.toDate() }
         });
         
-        if (!franchise) {
-            franchise = await User.findOne({ 
-                isFranchise: true, 
-                franchisePincode: 'default' 
-            });
-        }
-        
-        const order = new Order({
-            orderId: `ORD${Date.now()}`,
-            userId: user.userId,
-            userName: user.name,
-            userMobile: user.mobile,
-            userPincode: user.pincode,
-            franchiseId: franchise?.userId,
-            franchiseName: franchise?.name,
-            items: [{
-                productId: product._id,
-                productName: product.name,
-                category: product.categoryName,
-                quantity,
-                price: product.purchaseRate,
-                makingPacking: product.makingPacking,
-                deliveryCharge: product.deliveryCharge,
-                franchiseCharge: product.franchiseCharge
-            }],
-            totalAmount,
-            makingPackingTotal,
-            deliveryTotal,
-            franchiseChargeTotal,
-            gstAmount,
-            payableAmount,
-            paymentMethod,
-            utrNumber,
-            paymentProof,
-            orderType,
-            status: paymentMethod === 'wallet' ? 'approved' : 'pending',
-            assignedFranchise: franchise?.userId
+        const todayIncome = await Income.find({
+            userId: req.user.userId,
+            createdAt: { $gte: today.toDate() }
         });
         
-        await order.save();
+        const downline = await User.find({ parentId: req.user.userId });
         
-        // If wallet payment, process immediately
-        if (paymentMethod === 'wallet') {
-            if (user.wallet < payableAmount) {
-                return res.status(400).json({ success: false, message: 'Insufficient wallet balance' });
+        const todayTotalPurchase = todayPurchases.reduce((sum, p) => sum + p.totalAmount, 0);
+        const todayTotalIncome = todayIncome.reduce((sum, i) => sum + i.amount, 0);
+        
+        const bestPerformer = await Purchase.aggregate([
+            { $match: { createdAt: { $gte: today.toDate() } } },
+            { $group: { _id: '$userId', total: { $sum: '$totalAmount' } } },
+            { $sort: { total: -1 } },
+            { $limit: 1 }
+        ]);
+        
+        const bestEarner = await Income.aggregate([
+            { $match: { createdAt: { $gte: today.toDate() } } },
+            { $group: { _id: '$userId', total: { $sum: '$amount' } } },
+            { $sort: { total: -1 } },
+            { $limit: 1 }
+        ]);
+        
+        let bestPerformerName = 'N/A';
+        let bestEarnerName = 'N/A';
+        
+        if (bestPerformer.length > 0) {
+            const user = await User.findOne({ userId: bestPerformer[0]._id });
+            bestPerformerName = user ? user.username : 'N/A';
+        }
+        
+        if (bestEarner.length > 0) {
+            const user = await User.findOne({ userId: bestEarner[0]._id });
+            bestEarnerName = user ? user.username : 'N/A';
+        }
+        
+        res.json({
+            wallet: req.user.wallet,
+            monthWallet: req.user.monthWallet,
+            active: req.user.active,
+            activeUntil: req.user.activeUntil,
+            isFranchise: req.user.isFranchise,
+            totalPurchase: req.user.totalPurchase,
+            totalIncome: req.user.totalIncome,
+            directCount: req.user.directCount,
+            todayPurchase: todayTotalPurchase,
+            todayIncome: todayTotalIncome,
+            bestPerformer: bestPerformerName,
+            bestEarner: bestEarnerName,
+            bestPerformerAmount: bestPerformer.length > 0 ? bestPerformer[0].total : 0,
+            bestEarnerAmount: bestEarner.length > 0 ? bestEarner[0].total : 0
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get Company Details
+app.get('/api/company-details', async (req, res) => {
+    try {
+        const details = await CompanyDetails.findOne();
+        res.json(details || {});
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Check Birthday/Anniversary
+setInterval(async () => {
+    try {
+        const today = moment().format('MM-DD');
+        
+        const birthdayUsers = await User.find({
+            $expr: {
+                $eq: [{ $dateToString: { format: '%m-%d', date: '$birthdate' } }, today]
             }
-            
-            user.wallet -= payableAmount;
-            await user.save();
-            
-            // Distribute income
-            await distributeIncome(order, user, product);
-        }
-        
-        res.json({ 
-            success: true, 
-            message: 'Order placed successfully',
-            orderId: order.orderId,
-            status: order.status
         });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// Income Distribution Function
-async function distributeIncome(order, user, product) {
-    try {
-        const makingPackingTotal = order.makingPackingTotal;
         
-        // Get uplines
-        let currentUserId = user.sponsorId;
-        let level = 1;
+        for (let user of birthdayUsers) {
+            await sendEmail(
+                user.email,
+                '🎂 Happy Birthday - Lira',
+                'birthday-email.html',
+                {
+                    name: user.username,
+                    year: new Date().getFullYear()
+                }
+            );
+        }
         
-        while (currentUserId && level <= 10) {
-            const upline = await User.findOne({ userId: currentUserId });
-            
-            if (upline && upline.isActive) {
-                // Calculate level income (percentage based on admin settings)
-                const levelPercent = await Settings.findOne({ key: `level_${level}_percent` });
-                const percent = levelPercent?.value || 5; // Default 5%
-                
-                const incomeAmount = (makingPackingTotal * percent) / 100;
-                
-                const income = new Income({
-                    userId: upline.userId,
-                    fromUserId: user.userId,
-                    orderId: order.orderId,
-                    level,
-                    amount: incomeAmount,
-                    type: 'level',
-                    status: 'credited'
-                });
-                await income.save();
-                
-                upline.wallet += incomeAmount;
-                await upline.save();
-                
-                // Send email notification
-                await sendEmail(upline.email, 'Income Received!', `
-                    <div style="font-family: Arial; padding: 20px;">
-                        <h2>Congratulations ${upline.name}! 🎉</h2>
-                        <p>You received ₹${incomeAmount} as Level ${level} income from ${user.name}</p>
-                        <p>Order ID: ${order.orderId}</p>
-                    </div>
-                `);
+        const anniversaryUsers = await User.find({
+            $expr: {
+                $eq: [{ $dateToString: { format: '%m-%d', date: '$anniversary' } }, today]
             }
-            
-            const nextUpline = await User.findOne({ userId: currentUserId });
-            currentUserId = nextUpline?.sponsorId;
-            level++;
-        }
+        });
         
-        // Franchise commission
-        if (order.franchiseId) {
-            const franchise = await User.findOne({ userId: order.franchiseId });
-            if (franchise) {
-                const franchiseIncome = new Income({
-                    userId: franchise.userId,
-                    fromUserId: user.userId,
-                    orderId: order.orderId,
-                    amount: order.franchiseChargeTotal,
-                    type: 'franchise',
-                    status: 'credited'
-                });
-                await franchiseIncome.save();
-                
-                franchise.wallet += order.franchiseChargeTotal;
-                await franchise.save();
-            }
+        for (let user of anniversaryUsers) {
+            await sendEmail(
+                user.email,
+                '💝 Happy Anniversary - Lira',
+                'anniversary-email.html',
+                {
+                    name: user.username,
+                    year: new Date().getFullYear()
+                }
+            );
         }
-        
     } catch (error) {
-        console.error('Income Distribution Error:', error);
+        console.error('Birthday/Anniversary check error:', error);
     }
-}
+}, 60 * 60 * 1000); // Check every hour
 
-// 7. Admin - Approve Fund
-app.post('/api/admin/approve-fund/:orderId', authMiddleware, adminMiddleware, async (req, res) => {
-    try {
-        const order = await Order.findOne({ orderId: req.params.orderId });
-        if (!order) {
-            return res.status(404).json({ success: false, message: 'Order not found' });
-        }
-        
-        order.status = 'approved';
-        order.approvedAt = new Date();
-        await order.save();
-        
-        const user = await User.findOne({ userId: order.userId });
-        if (user) {
-            user.wallet += order.totalAmount;
-            await user.save();
-            
-            const transaction = new Transaction({
-                transactionId: `FUND${Date.now()}`,
-                userId: user.userId,
-                type: 'add_fund',
-                amount: order.totalAmount,
-                balance: user.wallet,
-                description: 'Fund added via admin approval'
-            });
-            await transaction.save();
-            
-            // Send email
-            await sendEmail(user.email, 'Fund Added Successfully!', `
-                <div style="font-family: Arial; padding: 20px;">
-                    <h2>Fund Added! 💰</h2>
-                    <p>Dear ${user.name},</p>
-                    <p>₹${order.totalAmount} has been added to your wallet.</p>
-                    <p>Current Balance: ₹${user.wallet}</p>
-                </div>
-            `);
-        }
-        
-        res.json({ success: true, message: 'Fund approved and credited' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
+// ==================== ADMIN ROUTES ====================
 
-// 8. Admin - Add Category
-app.post('/api/admin/category', authMiddleware, adminMiddleware, async (req, res) => {
+// Add Category
+app.post('/api/admin/add-category', adminMiddleware, async (req, res) => {
     try {
         const category = new Category(req.body);
         await category.save();
-        
-        res.json({ success: true, message: 'Category added', category });
+        res.json({ success: true, category });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// 9. Admin - Add Product
-app.post('/api/admin/product', authMiddleware, adminMiddleware, async (req, res) => {
+// Add Product
+app.post('/api/admin/add-product', adminMiddleware, async (req, res) => {
     try {
-        const category = await Category.findById(req.body.categoryId);
+        const category = await Category.findById(req.body.category);
         if (!category) {
-            return res.status(404).json({ success: false, message: 'Category not found' });
+            return res.status(400).json({ error: 'Category not found' });
         }
         
-        let purchaseRate = 0;
-        if (category.type === 'jewelry') {
-            purchaseRate = category.perGramRate * req.body.gram;
+        let totalPayable = 0;
+        const productData = { ...req.body };
+        
+        if (category.type === 'gram' && req.body.gram) {
+            productData.purchaseRate = category.purchaseRate * req.body.gram;
+            productData.expense = category.expense * req.body.gram;
+            productData.makingPacking = category.makingPacking * req.body.gram;
+            productData.deliveryCharge = category.deliveryCharge * req.body.gram;
+            productData.franchiseCharge = category.franchiseCharge * req.body.gram;
+            productData.franchisePool = category.franchisePool * req.body.gram;
+            productData.generalPool = category.generalPool * req.body.gram;
         } else {
-            purchaseRate = category.perPieceRate;
+            productData.purchaseRate = category.purchaseRate;
+            productData.expense = category.expense;
+            productData.makingPacking = category.makingPacking;
+            productData.deliveryCharge = category.deliveryCharge;
+            productData.franchiseCharge = category.franchiseCharge;
+            productData.franchisePool = category.franchisePool;
+            productData.generalPool = category.generalPool;
         }
         
-        const gstAmount = purchaseRate * (category.gstPercent / 100);
-        const payableAmount = purchaseRate + gstAmount;
+        productData.gst = category.gst;
         
-        const productData = {
-            ...req.body,
-            categoryName: category.name,
-            type: category.type,
-            purchaseRate,
-            expense: category.expense,
-            makingPacking: category.makingPacking,
-            deliveryCharge: category.deliveryCharge,
-            franchiseCharge: category.franchiseCharge,
-            franchisePool: category.franchisePool,
-            generalPool: category.generalPool,
-            gstPercent: category.gstPercent,
-            gstAmount,
-            payableAmount
-        };
+        const subtotal = productData.purchaseRate + productData.expense + 
+                        productData.makingPacking + productData.deliveryCharge + 
+                        productData.franchiseCharge + productData.franchisePool + 
+                        productData.generalPool;
+        
+        const gstAmount = (subtotal * productData.gst) / 100;
+        productData.totalPayable = subtotal + gstAmount;
+        
+        if (req.files && req.files.image) {
+            const file = req.files.image;
+            const fileName = 'product-' + Date.now() + '-' + file.name;
+            const uploadPath = path.join(__dirname, fileName);
+            await file.mv(uploadPath);
+            productData.image = '/' + fileName;
+        }
         
         const product = new Product(productData);
         await product.save();
         
         // Notify all users about new product
-        const users = await User.find({}, 'email');
-        for (const user of users) {
-            await sendEmail(user.email, 'New Product Arrived! 🎉', `
-                <div style="font-family: Arial; padding: 20px;">
-                    <h2>New Product: ${product.name}</h2>
-                    <p>Check out our latest product!</p>
-                    <p>Price: ₹${product.payableAmount}</p>
-                    <a href="#" style="background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Product</a>
-                </div>
-            `);
+        const users = await User.find({}, 'email username');
+        for (let user of users) {
+            await sendEmail(
+                user.email,
+                '🆕 New Product Added - Lira',
+                'new-product-email.html',
+                {
+                    name: user.username,
+                    productName: product.name,
+                    price: product.totalPayable,
+                    year: new Date().getFullYear()
+                }
+            );
         }
         
-        res.json({ success: true, message: 'Product added', product });
+        res.json({ success: true, product });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// 10. Admin - Settings
-app.post('/api/admin/settings', authMiddleware, adminMiddleware, async (req, res) => {
+// Get Pending Fund Requests
+app.get('/api/admin/fund-requests', adminMiddleware, async (req, res) => {
     try {
-        const { key, value } = req.body;
-        
-        await Settings.findOneAndUpdate(
-            { key },
-            { value, updatedAt: new Date() },
-            { upsert: true }
-        );
-        
-        res.json({ success: true, message: 'Settings updated' });
+        const requests = await FundRequest.find({ status: 'pending' }).sort({ createdAt: -1 });
+        res.json(requests);
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// 11. Payout Request
-app.post('/api/payout-request', authMiddleware, async (req, res) => {
+// Approve Fund Request
+app.post('/api/admin/approve-fund/:id', adminMiddleware, async (req, res) => {
     try {
-        const { amount, bankDetails } = req.body;
-        
-        const user = await User.findOne({ userId: req.userId });
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
+        const request = await FundRequest.findById(req.params.id);
+        if (!request) {
+            return res.status(404).json({ error: 'Request not found' });
         }
         
-        // Check if already pending payout
-        const pendingPayout = await Payout.findOne({ 
-            userId: user.userId, 
-            status: 'pending' 
-        });
+        request.status = 'approved';
+        request.approvedAt = new Date();
+        await request.save();
         
-        if (pendingPayout) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'You have a pending payout request' 
-            });
+        const user = await User.findOne({ userId: request.userId });
+        if (user) {
+            user.wallet += request.amount;
+            await user.save();
+            
+            await sendEmail(
+                user.email,
+                '✅ Fund Approved - Lira',
+                'fund-added-email.html',
+                {
+                    name: user.username,
+                    amount: request.amount,
+                    date: moment().format('DD-MM-YYYY')
+                }
+            );
         }
         
-        const settings = await Settings.findOne({ key: 'payout_settings' });
-        const minPayout = settings?.value?.minPayout || 100;
-        const maxPayout = settings?.value?.maxPayout || 50000;
-        const tdsPercent = settings?.value?.tdsPercent || 10;
-        const adminChargePercent = settings?.value?.adminChargePercent || 5;
-        
-        if (amount < minPayout || amount > maxPayout) {
-            return res.status(400).json({ 
-                success: false, 
-                message: `Amount must be between ₹${minPayout} and ₹${maxPayout}` 
-            });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Reject Fund Request
+app.post('/api/admin/reject-fund/:id', adminMiddleware, async (req, res) => {
+    try {
+        const request = await FundRequest.findById(req.params.id);
+        if (!request) {
+            return res.status(404).json({ error: 'Request not found' });
         }
         
-        if (user.wallet < amount) {
-            return res.status(400).json({ success: false, message: 'Insufficient balance' });
+        request.status = 'rejected';
+        await request.save();
+        
+        const user = await User.findOne({ userId: request.userId });
+        if (user) {
+            await sendEmail(
+                user.email,
+                '❌ Fund Request Rejected - Lira',
+                'fund-added-email.html',
+                {
+                    name: user.username,
+                    amount: request.amount,
+                    date: moment().format('DD-MM-YYYY')
+                }
+            );
         }
         
-        const tdsAmount = (amount * tdsPercent) / 100;
-        const adminChargeAmount = (amount * adminChargePercent) / 100;
-        const netAmount = amount - tdsAmount - adminChargeAmount;
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update Company Details
+app.post('/api/admin/update-company', adminMiddleware, async (req, res) => {
+    try {
+        let company = await CompanyDetails.findOne();
+        if (!company) {
+            company = new CompanyDetails();
+        }
         
-        const payout = new Payout({
-            payoutId: `POUT${Date.now()}`,
-            userId: user.userId,
-            amount,
-            tdsPercent,
-            adminChargePercent,
-            tdsAmount,
-            adminChargeAmount,
-            netAmount,
-            bankDetails
-        });
+        Object.assign(company, req.body);
         
+        if (req.files && req.files.qrCode) {
+            const file = req.files.qrCode;
+            const fileName = 'qr-' + Date.now() + '-' + file.name;
+            const uploadPath = path.join(__dirname, fileName);
+            await file.mv(uploadPath);
+            company.qrCode = '/' + fileName;
+        }
+        
+        company.updatedAt = new Date();
+        await company.save();
+        
+        res.json({ success: true, company });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update Franchise Settings
+app.post('/api/admin/update-franchise-settings', adminMiddleware, async (req, res) => {
+    try {
+        let settings = await FranchiseSettings.findOne();
+        if (!settings) {
+            settings = new FranchiseSettings();
+        }
+        
+        Object.assign(settings, req.body);
+        await settings.save();
+        
+        res.json({ success: true, settings });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get Pending Payouts
+app.get('/api/admin/payouts', adminMiddleware, async (req, res) => {
+    try {
+        const payouts = await Payout.find({ status: 'pending' }).sort({ createdAt: -1 });
+        res.json(payouts);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Approve Payout
+app.post('/api/admin/approve-payout/:id', adminMiddleware, async (req, res) => {
+    try {
+        const payout = await Payout.findById(req.params.id);
+        if (!payout) {
+            return res.status(404).json({ error: 'Payout not found' });
+        }
+        
+        payout.status = 'approved';
+        payout.processedAt = new Date();
         await payout.save();
         
-        res.json({ 
-            success: true, 
-            message: 'Payout request submitted',
-            payoutId: payout.payoutId,
-            netAmount
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// 12. Birthday/Anniversary Greetings
-app.get('/api/today-celebrations', async (req, res) => {
-    try {
-        const today = new Date();
-        const todayMonth = today.getMonth() + 1;
-        const todayDate = today.getDate();
-        
-        const birthdays = await User.find({
-            birthDate: {
-                $expr: {
-                    $and: [
-                        { $eq: [{ $month: "$birthDate" }, todayMonth] },
-                        { $eq: [{ $dayOfMonth: "$birthDate" }, todayDate] }
-                    ]
+        const user = await User.findOne({ userId: payout.userId });
+        if (user) {
+            await sendEmail(
+                user.email,
+                '💰 Payout Approved - Lira',
+                'payout-email.html',
+                {
+                    name: user.username,
+                    amount: payout.netAmount,
+                    date: moment().format('DD-MM-YYYY')
                 }
-            }
-        }, 'name userId');
-        
-        const anniversaries = await User.find({
-            anniversaryDate: {
-                $expr: {
-                    $and: [
-                        { $eq: [{ $month: "$anniversaryDate" }, todayMonth] },
-                        { $eq: [{ $dayOfMonth: "$anniversaryDate" }, todayDate] }
-                    ]
-                }
-            }
-        }, 'name userId');
-        
-        res.json({
-            success: true,
-            birthdays,
-            anniversaries
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// 13. Dashboard Stats
-app.get('/api/dashboard-stats', authMiddleware, async (req, res) => {
-    try {
-        const user = await User.findOne({ userId: req.userId });
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
+            );
         }
         
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const [totalOrders, pendingPayout, todayEarnings, team] = await Promise.all([
-            Order.countDocuments({ userId: user.userId }),
-            Payout.findOne({ userId: user.userId, status: 'pending' }),
-            Income.aggregate([
-                { $match: { userId: user.userId, createdAt: { $gte: today } } },
-                { $group: { _id: null, total: { $sum: '$amount' } } }
-            ]),
-            User.countDocuments({ sponsorId: user.userId })
-        ]);
-        
-        res.json({
-            success: true,
-            stats: {
-                wallet: user.wallet,
-                wallet12Month: user.wallet12Month,
-                totalOrders: totalOrders || 0,
-                teamSize: team || 0,
-                todayEarnings: todayEarnings[0]?.total || 0,
-                pendingPayout: !!pendingPayout,
-                isActive: user.isActive,
-                activeUntil: user.activeUntil,
-                isFranchise: user.isFranchise
-            }
-        });
+        res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// 14. Best Performers
-app.get('/api/best-performers', async (req, res) => {
+// Reject Payout
+app.post('/api/admin/reject-payout/:id', adminMiddleware, async (req, res) => {
     try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const payout = await Payout.findById(req.params.id);
+        if (!payout) {
+            return res.status(404).json({ error: 'Payout not found' });
+        }
         
-        const topBuyers = await Order.aggregate([
-            { $match: { createdAt: { $gte: today }, status: 'approved' } },
-            { $group: { _id: '$userId', total: { $sum: '$totalAmount' }, name: { $first: '$userName' } } },
-            { $sort: { total: -1 } },
-            { $limit: 5 }
-        ]);
+        payout.status = 'rejected';
+        await payout.save();
         
-        const topEarners = await Income.aggregate([
-            { $match: { createdAt: { $gte: today } } },
-            { $group: { _id: '$userId', total: { $sum: '$amount' } } },
-            { $sort: { total: -1 } },
-            { $limit: 5 },
-            { $lookup: { from: 'users', localField: '_id', foreignField: 'userId', as: 'user' } }
-        ]);
+        const user = await User.findOne({ userId: payout.userId });
+        if (user) {
+            user.wallet += payout.amount;
+            await user.save();
+            
+            await sendEmail(
+                user.email,
+                '❌ Payout Rejected - Lira',
+                'payout-email.html',
+                {
+                    name: user.username,
+                    amount: payout.amount,
+                    date: moment().format('DD-MM-YYYY')
+                }
+            );
+        }
         
-        res.json({
-            success: true,
-            topBuyers,
-            topEarners: topEarners.map(e => ({
-                userId: e._id,
-                name: e.user[0]?.name,
-                amount: e.total
-            }))
-        });
+        res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// ============= SERVE HTML FILES =============
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
-app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
-app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'register.html')));
-app.get('/products', (req, res) => res.sendFile(path.join(__dirname, 'products.html')));
-app.get('/cart', (req, res) => res.sendFile(path.join(__dirname, 'cart.html')));
-app.get('/checkout', (req, res) => res.sendFile(path.join(__dirname, 'checkout.html')));
-app.get('/wallet', (req, res) => res.sendFile(path.join(__dirname, 'wallet.html')));
-app.get('/franchise', (req, res) => res.sendFile(path.join(__dirname, 'franchise.html')));
-app.get('/pool', (req, res) => res.sendFile(path.join(__dirname, 'pool.html')));
+// Get All Users
+app.get('/api/admin/users', adminMiddleware, async (req, res) => {
+    try {
+        const users = await User.find().sort({ createdAt: -1 });
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
-// Start Server
-const PORT = process.env.PORT || 5000;
+// Admin Add Fund
+app.post('/api/admin/add-fund/:userId', adminMiddleware, async (req, res) => {
+    try {
+        const { amount } = req.body;
+        const user = await User.findOne({ userId: req.params.userId });
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        user.wallet += parseFloat(amount);
+        await user.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Admin Deduct Fund
+app.post('/api/admin/deduct-fund/:userId', adminMiddleware, async (req, res) => {
+    try {
+        const { amount } = req.body;
+        const user = await User.findOne({ userId: req.params.userId });
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        user.wallet -= parseFloat(amount);
+        await user.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==================== START SERVER ====================
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`✅ Server running on http://localhost:${PORT}`);
-    console.log(`📧 Brevo Email Configured`);
-    console.log(`💾 MongoDB Connected`);
-    console.log(`🚀 Lira Platform Ready`);
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

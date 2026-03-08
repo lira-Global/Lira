@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Anniversary - Lira</title>
+    <style>
+        body {
+            font-family: 'Poppins', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .anniversary-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        .content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .message {
+            font-size: 1.2rem;
+            color: #666;
+            margin: 30px 0;
+            line-height: 1.8;
+        }
+        .gift-box {
+            background: #f0f4ff;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="anniversary-icon">💝</div>
+            <h1 style="color: white;">Happy Anniversary!</h1>
+        </div>
+        
+        <div class="content">
+            <h2>Dear {{name}},</h2>
+            
+            <div class="message">
+                <p>Congratulations on your anniversary!</p>
+                <p>May your journey together be filled with love, happiness, and success.</p>
+            </div>
+            
+            <div class="gift-box">
+                <h3>💐 Special Anniversary Gift 💐</h3>
+                <p style="margin: 15px 0;">As a token of our love, enjoy exclusive benefits:</p>
+                <ul style="list-style: none; padding: 0;">
+                    <li style="margin: 10px 0;">✨ Double reward points on next purchase</li>
+                    <li style="margin: 10px 0;">✨ Free delivery on all orders this week</li>
+                    <li style="margin: 10px 0;">✨ Special anniversary discount coupon</li>
+                </ul>
+            </div>
+            
+            <p>Thank you for being part of Lira family.</p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{year}} Lira. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

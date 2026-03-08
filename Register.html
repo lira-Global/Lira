@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Lira</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container" style="max-width: 500px; margin: 50px auto;">
+        <div class="card">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="font-size: 2.5rem; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Lira</h1>
+                <p>Create your account</p>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <form id="registerForm">
+                <div class="form-group">
+                    <label class="form-label">Sponsor ID</label>
+                    <input type="text" class="form-control" id="sponsorId" required placeholder="Enter sponsor ID">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="name" required placeholder="Enter your full name">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mobile Number</label>
+                    <input type="tel" class="form-control" id="mobile" required placeholder="Enter 10 digit mobile" pattern="[0-9]{10}">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="email" class="form-control" id="email" required placeholder="Enter your email" style="flex: 1;">
+                        <button type="button" class="btn btn-outline" id="sendOtpBtn" onclick="sendOtp()">Send OTP</button>
+                    </div>
+                </div>
+
+                <div class="form-group" id="otpSection" style="display: none;">
+                    <label class="form-label">Enter OTP</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" class="form-control" id="otp" placeholder="Enter 6 digit OTP" maxlength="6" style="flex: 1;">
+                        <button type="button" class="btn btn-outline" id="verifyOtpBtn" onclick="verifyOtp()">Verify</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Pincode</label>
+                    <input type="text" class="form-control" id="pincode" required placeholder="Enter pincode" pattern="[0-9]{6}">
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;" id="submitBtn" disabled>Register</button>
+            </form>
+
+            <p class="text-center" style="margin-top: 20px;">
+                Already have an account? <a href="/login" style="color: var(--primary);">Login here</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let isEmailVerified = false;
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alert-container');
+            alertContainer.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                alertContainer.innerHTML = '';
+            }, 5000);
+        }
+
+        async function sendOtp() {
+            const email = document.getElementById('email').value;
+            const mobile = document.getElementById('mobile').value;
+
+            if (!email || !mobile) {
+                showAlert('Please enter email and mobile first', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, mobile })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('OTP sent to your email!', 'success');
+                    document.getElementById('otpSection').style.display = 'block';
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error sending OTP', 'error');
+            }
+        }
+
+        async function verifyOtp() {
+            const email = document.getElementById('email').value;
+            const otp = document.getElementById('otp').value;
+
+            if (!otp || otp.length !== 6) {
+                showAlert('Please enter valid OTP', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, otp })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    isEmailVerified = true;
+                    document.getElementById('submitBtn').disabled = false;
+                    document.getElementById('sendOtpBtn').disabled = true;
+                    document.getElementById('verifyOtpBtn').disabled = true;
+                    document.getElementById('otp').disabled = true;
+                    showAlert('Email verified successfully!', 'success');
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error verifying OTP', 'error');
+            }
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!isEmailVerified) {
+                showAlert('Please verify your email first', 'error');
+                return;
+            }
+
+            const formData = {
+                sponsorId: document.getElementById('sponsorId').value,
+                name: document.getElementById('name').value,
+                mobile: document.getElementById('mobile').value,
+                email: document.getElementById('email').value,
+                pincode: document.getElementById('pincode').value
+            };
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Registration successful! Your User ID: ' + data.userId, 'success');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 3000);
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error during registration', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

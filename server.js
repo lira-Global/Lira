@@ -6,9 +6,9 @@ const MongoDBStore = require('connect-mongodb-session')(session);
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const nodemailer = require('nodemailer');
 const moment = require('moment');
 const fileUpload = require('express-fileupload');
+const axios = require('axios'); // ✅ ADDED for Brevo API
 require('dotenv').config();
 
 const app = express();
@@ -73,8 +73,8 @@ const connectWithRetry = async () => {
             await mongoose.connect(process.env.MONGODB_URI, {
                 useNewUrlParser: true,
                 useUnifiedTopology: true,
-                serverSelectionTimeoutMS: 10000, // Timeout after 10 seconds
-                socketTimeoutMS: 45000, // Close sockets after 45 seconds
+                serverSelectionTimeoutMS: 10000,
+                socketTimeoutMS: 45000,
             });
             
             console.log('✅✅✅ MongoDB Connected Successfully! ✅✅✅');
@@ -101,7 +101,7 @@ const connectWithRetry = async () => {
             
             if (retries < maxRetries) {
                 retries++;
-                const delay = Math.pow(2, retries) * 1000; // Exponential backoff
+                const delay = Math.pow(2, retries) * 1000;
                 console.log(`🔄 Retrying connection in ${delay/1000} seconds... (Attempt ${retries}/${maxRetries})`);
                 setTimeout(connect, delay);
             } else {
@@ -116,22 +116,39 @@ const connectWithRetry = async () => {
 // Start connection
 connectWithRetry();
 
-// Email Configuration
-let transporter;
-try {
-    transporter = nodemailer.createTransport({
-        host: 'smtp-relay.brevo.com',
-        port: 587,
-        secure: false,
-        auth: {
-            user: 'global.business.lira@gmail.com',
-            pass: process.env.BREVO_API_KEY
+// ==================== BREVO EMAIL API FUNCTION ====================
+// ✅ NEW: Brevo API email sender (replaces SMTP)
+const sendEmailViaBrevo = async (to, subject, htmlContent) => {
+    try {
+        const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
+            sender: {
+                name: 'Lira',
+                email: process.env.EMAIL_USER || 'global.business.lira@gmail.com'
+            },
+            to: [{
+                email: to,
+                name: to.split('@')[0]
+            }],
+            subject: subject,
+            htmlContent: htmlContent
+        }, {
+            headers: {
+                'api-key': process.env.BREVO_API_KEY,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        console.log(`✅ Email sent successfully to ${to}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Brevo API Error:', error.response?.data || error.message);
+        if (error.response) {
+            console.error('Status:', error.response.status);
+            console.error('Data:', JSON.stringify(error.response.data, null, 2));
         }
-    });
-    console.log('✅ Email transporter configured');
-} catch (err) {
-    console.error('❌ Email configuration error:', err);
-}
+        return false;
+    }
+};
 
 // ==================== SCHEMAS ====================
 
@@ -389,7 +406,7 @@ async function initializeDatabase() {
                 email: 'admin@lira.com',
                 password: hashedPassword,
                 active: true,
-                wallet: 100000 // Admin ko starting balance
+                wallet: 100000
             });
             console.log('✅ Admin user created');
         }
@@ -424,15 +441,10 @@ const adminMiddleware = async (req, res, next) => {
     next();
 };
 
-// ==================== EMAIL FUNCTIONS ====================
-
+// ==================== EMAIL FUNCTION ====================
+// ✅ NEW: Using Brevo API instead of SMTP
 const sendEmail = async (to, subject, templateFile, replacements) => {
     try {
-        if (!transporter) {
-            console.log('⚠️ Email transporter not configured, skipping email');
-            return false;
-        }
-        
         const templatePath = path.join(__dirname, templateFile);
         if (!fs.existsSync(templatePath)) {
             console.log(`⚠️ Email template ${templateFile} not found`);
@@ -445,16 +457,9 @@ const sendEmail = async (to, subject, templateFile, replacements) => {
             template = template.replace(new RegExp(`{{${key}}}`, 'g'), replacements[key]);
         }
         
-        const mailOptions = {
-            from: process.env.EMAIL_FROM || 'Lira <global.business.lira@gmail.com>',
-            to: to,
-            subject: subject,
-            html: template
-        };
-
-        await transporter.sendMail(mailOptions);
-        console.log(`✅ Email sent to ${to}`);
-        return true;
+        // ✅ Use Brevo API instead of SMTP
+        return await sendEmailViaBrevo(to, subject, template);
+        
     } catch (error) {
         console.error('❌ Email sending failed:', error);
         return false;
@@ -664,7 +669,7 @@ app.post('/api/send-otp', async (req, res) => {
         await OTP.deleteMany({ email });
         await OTP.create({ email, otp });
         
-        await sendEmail(
+        const emailSent = await sendEmail(
             email,
             '🔐 Email Verification - Lira',
             'welcome-email.html',
@@ -675,8 +680,13 @@ app.post('/api/send-otp', async (req, res) => {
             }
         );
         
+        if (!emailSent) {
+            return res.status(500).json({ error: 'Failed to send OTP email' });
+        }
+        
         res.json({ success: true, message: 'OTP sent successfully' });
     } catch (error) {
+        console.error('❌ Send OTP error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -1016,7 +1026,6 @@ app.post('/api/add-month-wallet', authMiddleware, async (req, res) => {
         await req.user.save();
         
         if (month === 12) {
-            // Notify admin
             await sendEmail(
                 'admin@lira.com',
                 '📅 12th Month Fund Added',
@@ -1066,8 +1075,6 @@ app.get('/api/dashboard', authMiddleware, async (req, res) => {
             userId: req.user.userId,
             createdAt: { $gte: today.toDate() }
         });
-        
-        const downline = await User.find({ parentId: req.user.userId });
         
         const todayTotalPurchase = todayPurchases.reduce((sum, p) => sum + p.totalAmount, 0);
         const todayTotalIncome = todayIncome.reduce((sum, i) => sum + i.amount, 0);
@@ -1173,7 +1180,7 @@ setInterval(async () => {
     } catch (error) {
         console.error('Birthday/Anniversary check error:', error);
     }
-}, 60 * 60 * 1000); // Check every hour
+}, 60 * 60 * 1000);
 
 // ==================== ADMIN ROUTES ====================
 
@@ -1238,7 +1245,6 @@ app.post('/api/admin/add-product', adminMiddleware, async (req, res) => {
         const product = new Product(productData);
         await product.save();
         
-        // Notify all users about new product
         const users = await User.find({}, 'email username');
         for (let user of users) {
             await sendEmail(

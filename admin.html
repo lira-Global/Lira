@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .admin-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .admin-tab {
+            padding: 0.8rem 1.5rem;
+            background: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #333;
+            transition: all 0.3s;
+        }
+        
+        .admin-tab.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .admin-tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        
+        .admin-section {
+            display: none;
+        }
+        
+        .admin-section.active {
+            display: block;
+        }
+        
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">Lira Admin</div>
+        <div class="nav-links">
+            <a href="/index.html">Home</a>
+            <a href="/admin.html">Admin</a>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <h1 class="card-title">Admin Panel</h1>
+        
+        <div class="admin-tabs">
+            <button class="admin-tab active" onclick="showAdminTab('dashboard')">Dashboard</button>
+            <button class="admin-tab" onclick="showAdminTab('funds')">Fund Requests</button>
+            <button class="admin-tab" onclick="showAdminTab('categories')">Categories</button>
+            <button class="admin-tab" onclick="showAdminTab('products')">Products</button>
+            <button class="admin-tab" onclick="showAdminTab('company')">Company Details</button>
+            <button class="admin-tab" onclick="showAdminTab('franchise')">Franchise Settings</button>
+            <button class="admin-tab" onclick="showAdminTab('users')">Users</button>
+            <button class="admin-tab" onclick="showAdminTab('payouts')">Payouts</button>
+        </div>
+        
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="admin-section active">
+            <div class="row">
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value" id="total-users">0</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-value" id="total-funds">₹0</div>
+                    <div class="stat-label">Total Fund Requests</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📦</div>
+                    <div class="stat-value" id="total-products">0</div>
+                    <div class="stat-label">Total Products</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🏢</div>
+                    <div class="stat-value" id="total-franchise">0</div>
+                    <div class="stat-label">Total Franchise</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Fund Requests Section -->
+        <div id="funds-section" class="admin-section">
+            <div class="card">
+                <h2 class="card-title">Pending Fund Requests</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Name</th>
+                                <th>Amount</th>
+                                <th>UTR</th>
+                                <th>Date</th>
+                                <th>Screenshot</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fund-requests">
+                            <tr>
+                                <td colspan="7" style="text-align: center;">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Categories Section -->
+        <div id="categories-section" class="admin-section">
+            <div class="card">
+                <h2 class="card-title">Add Category</h2>
+                <form id="addCategoryForm">
+                    <div class="form-group">
+                        <label>Category Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select name="type" class="form-control" required>
+                            <option value="gram">Gram Based</option>
+                            <option value="piece">Piece Based</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Purchase Rate (per gram/piece)</label>
+                        <input type="number" name="purchaseRate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Expense</label>
+                        <input type="number" name="expense" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Making + Packing</label>
+                        <input type="number" name="makingPacking" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Delivery Charge</label>
+                        <input type="number" name="deliveryCharge" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Franchise Charge</label>
+                        <input type="number" name="franchiseCharge" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Franchise Pool</label>
+                        <input type="number" name="franchisePool" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>General Pool</label>
+                        <input type="number" name="generalPool" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>GST (%)</label>
+                        <input type="number" name="gst" class="form-control" value="18" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Category</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Products Section -->
+        <div id="products-section" class="admin-section">
+            <div class="card">
+                <h2 class="card-title">Add Product</h2>
+                <form id="addProductForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label>Product Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select name="category" id="category-select" class="form-control" required>
+                            <option value="">Select Category</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="gram-field">
+                        <label>Gram</label>
+                        <input type="number" name="gram" class="form-control" value="1">
+                    </div>
+                    <div class="form-group" id="size-field" style="display:none;">
+                        <label>Size</label>
+                        <input type="text" name="size" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Product Image</label>
+                        <input type="file" name="image" class="form-control" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label>Stock</label>
+                        <input type="number" name="stock" class="form-control" value="1000">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Product</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Company Details Section -->
+        <div id="company-section" class="admin-section">
+            <div class="card">
+                <h2 class="card-title">Company Banking Details</h2>
+                <form id="updateCompanyForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label>Bank Name</label>
+                        <input type="text" name="bankName" id="bankName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Account Number</label>
+                        <input type="text" name="accountNumber" id="accountNumber" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>IFSC Code</label>
+                        <input type="text" name="ifscCode" id="ifscCode" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Account Holder Name</label>
+                        <input type="text" name="accountHolder" id="accountHolder" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>UPI ID</label>
+                        <input type="text" name="upiId" id="upiId" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>QR Code Image</label>
+                        <input type="file" name="qrCode" class="form-control" accept="image/*">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Details</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Franchise Settings Section -->
+        <div id="franchise-section" class="admin-section">
+            <div class="card">
+                <h2 class="card-title">Franchise Settings</h2>
+                <form id="franchiseSettingsForm">
+                    <div class="form-group">
+                        <label>Max Franchise per Pincode</label>
+                        <input type="number" name="maxFranchisePerPincode" id="maxFranchise" class="form-control" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Default Franchise User ID</label>
+                        <input type="text" name="defaultFranchise" id="defaultFranchise" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Welcome Bonus (%)</label>
+                        <input type="number" name="welcomeBonus" id="welcomeBonus" class="form-control" value="10">
+                    </div>
+                    <div class="form-group">
+                        <label>Pool Distribution Type</label>
+                        <select name="poolDistributionType" id="poolType" class="form-control">
+                            <option value="equal">Equal Distribution</option>
+                            <option value="percentage">Percentage Based</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Pool Exit Amount</label>
+                        <input type="number" name="poolExitAmount" id="poolExitAmount" class="form-control" value="10000">
+                    </div>
+                    <div class="form-group">
+                        <label>Level Distribution (Max Levels)</label>
+                        <input type="number" name="levelDistribution" id="levelDistribution" class="form-control" value="10">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Settings</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Users Section -->
+        <div id="users-section" class="admin-section">
+            <div class="card">
+                <h2 class="card-title">Manage Users</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Name</th>
+                                <th>Mobile</th>
+                                <th>Email</th>
+                                <th>Wallet</th>
+                                <th>Active</th>
+                                <th>Franchise</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-list">
+                            <tr>
+                                <td colspan="8" style="text-align: center;">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payouts Section -->
+        <div id="payouts-section" class="admin-section">
+            <div class="card">
+                <h2 class="card-title">Pending Payouts</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Amount</th>
+                                <th>Admin Charge</th>
+                                <th>GST</th>
+                                <th>Net Amount</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payouts-list">
+                            <tr>
+                                <td colspan="7" style="text-align: center;">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <p>&copy; 2024 Lira. All rights reserved.</p>
+    </footer>
+    
+    <script src="/script.js"></script>
+    <script>
+        function showAdminTab(tabName) {
+            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+            
+            document.getElementById(tabName + '-section').classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // Load categories for product form
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/categories');
+                const categories = await response.json();
+                const select = document.getElementById('category-select');
+                
+                select.innerHTML = '<option value="">Select Category</option>' + 
+                    categories.map(c => `<option value="${c._id}" data-type="${c.type}">${c.name}</option>`).join('');
+                
+                select.addEventListener('change', function() {
+                    const option = this.options[this.selectedIndex];
+                    const type = option.dataset.type;
+                    
+                    if (type === 'gram') {
+                        document.getElementById('gram-field').style.display = 'block';
+                        document.getElementById('size-field').style.display = 'none';
+                    } else {
+                        document.getElementById('gram-field').style.display = 'none';
+                        document.getElementById('size-field').style.display = 'block';
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to load categories:', error);
+            }
+        }
+        
+        // Load users
+        async function loadUsers() {
+            try {
+                const users = await API.get('/api/admin/users');
+                const tbody = document.getElementById('users-list');
+                
+                tbody.innerHTML = users.map(user => `
+                    <tr>
+                        <td>${user.userId}</td>
+                        <td>${user.username}</td>
+                        <td>${user.mobile}</td>
+                        <td>${user.email}</td>
+                        <td>₹${user.wallet.toFixed(2)}</td>
+                        <td><span class="badge ${user.active ? 'badge-success' : 'badge-danger'}">${user.active ? 'Active' : 'Inactive'}</span></td>
+                        <td><span class="badge ${user.isFranchise ? 'badge-success' : 'badge-secondary'}">${user.isFranchise ? 'Yes' : 'No'}</span></td>
+                        <td>
+                            <button class="btn btn-success btn-sm" onclick="addFund('${user.userId}')">Add Fund</button>
+                            <button class="btn btn-danger btn-sm" onclick="deductFund('${user.userId}')">Deduct</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load users:', error);
+            }
+        }
+        
+        async function addFund(userId) {
+            const amount = prompt('Enter amount to add:');
+            if (!amount) return;
+            
+            try {
+                await API.post(`/api/admin/add-fund/${userId}`, { amount: parseFloat(amount) });
+                showAlert('Fund added successfully');
+                loadUsers();
+            } catch (error) {
+                showAlert(error.message, 'error');
+            }
+        }
+        
+        async function deductFund(userId) {
+            const amount = prompt('Enter amount to deduct:');
+            if (!amount) return;
+            
+            try {
+                await API.post(`/api/admin/deduct-fund/${userId}`, { amount: parseFloat(amount) });
+                showAlert('Fund deducted successfully');
+                loadUsers();
+            } catch (error) {
+                showAlert(error.message, 'error');
+            }
+        }
+        
+        // Initialize admin panel
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCategories();
+            loadUsers();
+            loadFundRequests();
+        });
+    </script>
+</body>
+</html>

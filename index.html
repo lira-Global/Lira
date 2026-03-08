@@ -17,7 +17,6 @@
             min-height: 100vh;
         }
 
-        /* Navbar */
         .navbar {
             background: white;
             padding: 1rem 5%;
@@ -84,14 +83,27 @@
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
-        /* Container */
+        .btn-logout {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 50px;
+            background: #ff4757;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-logout:hover {
+            background: #ff6b81;
+            transform: translateY(-2px);
+        }
+
         .container {
             max-width: 1200px;
             margin: 2rem auto;
             padding: 0 20px;
         }
 
-        /* Hero Section */
         .hero {
             text-align: center;
             padding: 4rem 2rem;
@@ -131,11 +143,6 @@
             font-size: 1rem;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255,255,255,0.3);
-        }
-
         .btn-secondary {
             padding: 1rem 2rem;
             border: 2px solid white;
@@ -148,12 +155,6 @@
             font-size: 1rem;
         }
 
-        .btn-secondary:hover {
-            background: white;
-            color: #667eea;
-        }
-
-        /* Stats Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -186,12 +187,43 @@
             font-size: 0.9rem;
         }
 
-        /* Products Grid */
         .section-title {
             text-align: center;
             font-size: 2rem;
             margin: 3rem 0;
             color: white;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin: 3rem 0;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .feature-desc {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.5;
         }
 
         .product-grid {
@@ -248,45 +280,6 @@
             cursor: pointer;
         }
 
-        .btn-block:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        /* Features */
-        .features {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-            margin: 3rem 0;
-        }
-
-        .feature-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 15px;
-            text-align: center;
-        }
-
-        .feature-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .feature-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #333;
-        }
-
-        .feature-desc {
-            color: #666;
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-
-        /* CTA Section */
         .cta-section {
             background: white;
             border-radius: 20px;
@@ -306,7 +299,6 @@
             margin-bottom: 2rem;
         }
 
-        /* Footer */
         .footer {
             text-align: center;
             padding: 2rem;
@@ -314,54 +306,46 @@
             border-top: 1px solid rgba(255,255,255,0.1);
         }
 
-        /* Mobile Responsive */
         @media (max-width: 768px) {
             .navbar {
                 flex-direction: column;
                 gap: 1rem;
             }
-
             .nav-links {
                 flex-wrap: wrap;
                 justify-content: center;
             }
-
             .hero h1 {
                 font-size: 2rem;
             }
-
             .stats-grid,
-            .product-grid,
-            .features {
+            .features,
+            .product-grid {
                 grid-template-columns: 1fr;
             }
-
             .cta-section {
                 padding: 2rem;
             }
         }
 
-        /* Loading */
-        .loading {
-            text-align: center;
-            color: white;
-            padding: 2rem;
+        .wallet-badge {
+            color: #667eea;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            background: #f0f4ff;
+            border-radius: 50px;
         }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="logo">Lira</div>
-        <div class="nav-links">
-            <a href="/index.html">Home</a>
-            <a href="/products.html">Products</a>
-            <a href="/login.html" class="btn-login">Login</a>
-            <a href="/register.html" class="btn-register">Register</a>
+        <div class="nav-links" id="navLinks">
+            <!-- Dynamically filled by JavaScript -->
         </div>
     </nav>
     
     <div class="container">
-        <!-- Hero Section -->
         <div class="hero">
             <h1>Welcome to Lira</h1>
             <p>Your Premium Business Platform for Quality Products and Growth</p>
@@ -371,8 +355,7 @@
             </div>
         </div>
         
-        <!-- Stats Section -->
-        <div class="stats-grid" id="stats-container">
+        <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon">👥</div>
                 <div class="stat-value">10,000+</div>
@@ -395,7 +378,6 @@
             </div>
         </div>
         
-        <!-- Features Section -->
         <h2 class="section-title">Why Choose Lira?</h2>
         
         <div class="features">
@@ -421,15 +403,12 @@
             </div>
         </div>
         
-        <!-- Products Section -->
         <h2 class="section-title">Featured Products</h2>
         
         <div id="featured-products" class="product-grid">
-            <!-- Products will be loaded here -->
-            <div class="loading">Loading products...</div>
+            <div class="loading" style="color:white; text-align:center; grid-column:span 4;">Loading products...</div>
         </div>
         
-        <!-- CTA Section -->
         <div class="cta-section">
             <h2>Ready to Start Your Journey?</h2>
             <p>Join thousands of successful entrepreneurs and customers who trust Lira</p>
@@ -443,14 +422,60 @@
     <footer class="footer">
         <p>© 2024 Lira. All rights reserved. | Premium Business Platform</p>
     </footer>
-    
+
+    <script src="/script.js"></script>
     <script>
-        // Load products
-        async function loadProducts() {
+        // Navbar update function
+        async function updateNavbar() {
+            try {
+                const user = await API.get('/api/user');
+                const navLinks = document.getElementById('navLinks');
+                
+                if (user.userId === 'admin') {
+                    // Admin ke liye navbar
+                    navLinks.innerHTML = `
+                        <a href="/index.html">Home</a>
+                        <a href="/products.html">Products</a>
+                        <a href="/admin.html">Admin Panel</a>
+                        <button class="btn-logout" onclick="logout()">Logout</button>
+                    `;
+                } else if (user) {
+                    // Normal user ke liye navbar
+                    navLinks.innerHTML = `
+                        <a href="/index.html">Home</a>
+                        <a href="/dashboard.html">Dashboard</a>
+                        <a href="/products.html">Products</a>
+                        <a href="/wallet.html">Wallet</a>
+                        <a href="/profile.html">Profile</a>
+                        <button class="btn-logout" onclick="logout()">Logout</button>
+                        <span class="wallet-badge">₹${user.wallet || 0}</span>
+                    `;
+                } else {
+                    // Guest ke liye navbar
+                    navLinks.innerHTML = `
+                        <a href="/index.html">Home</a>
+                        <a href="/products.html">Products</a>
+                        <a href="/login.html" class="btn-login">Login</a>
+                        <a href="/register.html" class="btn-register">Register</a>
+                    `;
+                }
+            } catch (error) {
+                // Agar user login nahi hai to guest navbar
+                const navLinks = document.getElementById('navLinks');
+                navLinks.innerHTML = `
+                    <a href="/index.html">Home</a>
+                    <a href="/products.html">Products</a>
+                    <a href="/login.html" class="btn-login">Login</a>
+                    <a href="/register.html" class="btn-register">Register</a>
+                `;
+            }
+        }
+
+        // Load featured products
+        async function loadFeaturedProducts() {
             try {
                 const response = await fetch('/api/products');
                 const products = await response.json();
-                
                 const container = document.getElementById('featured-products');
                 
                 if (products.length > 0) {
@@ -464,83 +489,17 @@
                             </div>
                         </div>
                     `).join('');
-                } else {
-                    container.innerHTML = `
-                        <div class="product-card">
-                            <div class="product-image">✨</div>
-                            <div class="product-details">
-                                <div class="product-name">Gold Coin</div>
-                                <div class="product-price">₹5,999</div>
-                                <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
-                            </div>
-                        </div>
-                        <div class="product-card">
-                            <div class="product-image">💍</div>
-                            <div class="product-details">
-                                <div class="product-name">Silver Ring</div>
-                                <div class="product-price">₹2,999</div>
-                                <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
-                            </div>
-                        </div>
-                        <div class="product-card">
-                            <div class="product-image">📱</div>
-                            <div class="product-details">
-                                <div class="product-name">Smart Watch</div>
-                                <div class="product-price">₹3,999</div>
-                                <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
-                            </div>
-                        </div>
-                        <div class="product-card">
-                            <div class="product-image">👕</div>
-                            <div class="product-details">
-                                <div class="product-name">Premium Shirt</div>
-                                <div class="product-price">₹1,999</div>
-                                <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
-                            </div>
-                        </div>
-                    `;
                 }
             } catch (error) {
                 console.error('Failed to load products:', error);
-                document.getElementById('featured-products').innerHTML = `
-                    <div class="product-card">
-                        <div class="product-image">✨</div>
-                        <div class="product-details">
-                            <div class="product-name">Gold Coin</div>
-                            <div class="product-price">₹5,999</div>
-                            <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
-                        </div>
-                    </div>
-                    <div class="product-card">
-                        <div class="product-image">💍</div>
-                        <div class="product-details">
-                            <div class="product-name">Silver Ring</div>
-                            <div class="product-price">₹2,999</div>
-                            <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
-                        </div>
-                    </div>
-                    <div class="product-card">
-                        <div class="product-image">📱</div>
-                        <div class="product-details">
-                            <div class="product-name">Smart Watch</div>
-                            <div class="product-price">₹3,999</div>
-                            <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
-                        </div>
-                    </div>
-                    <div class="product-card">
-                        <div class="product-image">👕</div>
-                        <div class="product-details">
-                            <div class="product-name">Premium Shirt</div>
-                            <div class="product-price">₹1,999</div>
-                            <button class="btn-block" onclick="location.href='/login.html'">View Details</button>
-                        </div>
-                    </div>
-                `;
             }
         }
-        
-        // Load products when page loads
-        document.addEventListener('DOMContentLoaded', loadProducts);
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateNavbar();
+            loadFeaturedProducts();
+        });
     </script>
 </body>
 </html>

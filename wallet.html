@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">Lira</div>
+        <div class="nav-links">
+            <a href="/index.html">Home</a>
+            <a href="/dashboard.html">Dashboard</a>
+            <a href="/products.html">Products</a>
+            <a href="/wallet.html">Wallet</a>
+            <a href="/profile.html">Profile</a>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <div class="wallet-card">
+                    <div class="wallet-title">Main Wallet Balance</div>
+                    <div class="wallet-amount" id="main-wallet">₹0</div>
+                    <div class="wallet-footer">
+                        <a href="/add-fund.html" class="btn btn-primary">Add Fund</a>
+                        <a href="/payout.html" class="btn btn-secondary">Request Payout</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col">
+                <div class="wallet-card" style="background: linear-gradient(135deg, #ff6b6b, #ee5a24);">
+                    <div class="wallet-title">12 Month Wallet</div>
+                    <div class="wallet-amount" id="month-wallet">₹0</div>
+                    <div class="wallet-footer">
+                        <button class="btn btn-primary" onclick="showAddMonthWallet()">Add to Month Wallet</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card" id="month-wallet-form" style="display:none;">
+            <h2 class="card-title">Add to 12 Month Wallet</h2>
+            <form id="addMonthWalletForm">
+                <div class="form-group">
+                    <label for="monthAmount">Amount (₹)</label>
+                    <input type="number" id="monthAmount" class="form-control" min="1" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Add to Month Wallet</button>
+            </form>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title">Month Wallet History</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Year</th>
+                            <th>Amount Added</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="month-history">
+                        <tr>
+                            <td colspan="4" style="text-align: center;">No history available</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <p>&copy; 2024 Lira. All rights reserved.</p>
+    </footer>
+    
+    <script src="/script.js"></script>
+    <script>
+        function showAddMonthWallet() {
+            document.getElementById('month-wallet-form').style.display = 'block';
+        }
+        
+        async function loadWalletData() {
+            try {
+                const user = await API.get('/api/user');
+                document.getElementById('main-wallet').textContent = formatCurrency(user.wallet);
+                document.getElementById('month-wallet').textContent = formatCurrency(user.monthWallet);
+                
+                const history = user.monthWalletHistory || [];
+                const tbody = document.getElementById('month-history');
+                
+                if (history.length > 0) {
+                    tbody.innerHTML = history.map(h => `
+                        <tr>
+                            <td>${h.month}</td>
+                            <td>${h.year}</td>
+                            <td>${formatCurrency(h.amount)}</td>
+                            <td>${formatDate(h.addedAt)}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load wallet data:', error);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', loadWalletData);
+    </script>
+</body>
+</html>

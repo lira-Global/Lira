@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira</div>
+            <div class="nav-links">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/profile" class="active">Profile</a>
+                <a href="/wallet">Wallet</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="grid grid-2">
+            <div class="glass-card">
+                <h2 style="margin-bottom: 20px;">Profile Information</h2>
+                
+                <div class="form-group">
+                    <label class="form-label">User ID</label>
+                    <input type="text" id="userId" class="form-control" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="username" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mobile Number</label>
+                    <input type="text" id="mobile" class="form-control" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" id="email" class="form-control" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Sponsor ID</label>
+                    <input type="text" id="sponsorId" class="form-control" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Birth Date</label>
+                    <input type="date" id="birthDate" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Anniversary Date</label>
+                    <input type="date" id="anniversaryDate" class="form-control">
+                </div>
+
+                <button class="btn btn-primary" onclick="updateProfile()">Update Profile</button>
+            </div>
+
+            <div class="glass-card">
+                <h2 style="margin-bottom: 20px;">My Tree Structure</h2>
+                <div id="treeContainer" class="tree-container">
+                    <div class="tree">
+                        <ul>
+                            <li>
+                                <div class="member-node active">
+                                    <strong>Loading...</strong>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

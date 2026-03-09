@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Messages - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .admin-message-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            height: calc(100vh - 150px);
+        }
+        .user-list {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .user-list-header {
+            padding: 20px;
+            background: var(--gradient);
+            color: white;
+        }
+        .user-search {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .user-search input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .user-items {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .user-item {
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .user-item:hover {
+            background: #f8fafc;
+        }
+        .user-item.active {
+            background: #eef2ff;
+            border-left: 4px solid var(--primary);
+        }
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: var(--gradient);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .user-info {
+            flex: 1;
+        }
+        .user-name {
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+        .user-id {
+            font-size: 12px;
+            color: var(--gray);
+        }
+        .user-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+        .user-status.offline {
+            background: #cbd5e0;
+        }
+        .unread-badge {
+            background: var(--primary);
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        .message-area {
+            background: white;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            padding: 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        .message.sent {
+            align-items: flex-end;
+        }
+        .message.received {
+            align-items: flex-start;
+        }
+        .message-bubble {
+            max-width: 60%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            position: relative;
+        }
+        .message.sent .message-bubble {
+            background: var(--gradient);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .message.received .message-bubble {
+            background: white;
+            color: var(--dark);
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .message-time {
+            font-size: 10px;
+            margin-top: 5px;
+            color: var(--gray);
+        }
+        .chat-footer {
+            padding: 20px;
+            border-top: 1px solid #e2e8f0;
+            background: white;
+        }
+        .message-input-container {
+            display: flex;
+            gap: 10px;
+        }
+        .message-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 24px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .message-input:focus {
+            border-color: var(--primary);
+        }
+        .attach-btn, .send-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        .attach-btn {
+            background: #f0f0f0;
+            color: var(--gray);
+        }
+        .attach-btn:hover {
+            background: #e2e8f0;
+        }
+        .send-btn {
+            background: var(--gradient);
+            color: white;
+        }
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+        .broadcast-section {
+            padding: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .admin-badge {
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira Admin</div>
+            <div class="nav-links">
+                <a href="/admin-dashboard">Dashboard</a>
+                <a href="/admin-message" class="active">Messages</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="admin-message-container">
+            <!-- User List -->
+            <div class="user-list">
+                <div class="user-list-header">
+                    <h3 style="color: white;">Users</h3>
+                    <p style="opacity: 0.9; font-size: 12px;">245 online • 1,234 total</p>
+                </div>
+                
+                <div class="user-search">
+                    <input type="text" placeholder="Search users..." id="userSearch" onkeyup="searchUsers()">
+                </div>
+
+                <div class="user-items" id="userList">
+                    <div class="user-item active" onclick="selectUser(this, '9876543210')">
+                        <div class="user-avatar">RJ</div>
+                        <div class="user-info">
+                            <div class="user-name">Rajesh Jain</div>
+                            <div class="user-id">ID: 9876543210</div>
+                        </div>
+                        <div class="user-status"></div>
+                        <span class="unread-badge">3</span>
+                    </div>
+
+                    <div class="user-item" onclick="selectUser(this, '9876543211')">
+                        <div class="user-avatar">PS</div>
+                        <div class="user-info">
+                            <div class="user-name">Priya Sharma</div>
+                            <div class="user-id">ID: 9876543211</div>
+                        </div>
+                        <div class="user-status offline"></div>
+                    </div>
+
+                    <div class="user-item" onclick="selectUser(this, '9876543212')">
+                        <div class="user-avatar">AV</div>
+                        <div class="user-info">
+                            <div class="user-name">Amit Verma</div>
+                            <div class="user-id">ID: 9876543212</div>
+                        </div>
+                        <div class="user-status"></div>
+                        <span class="unread-badge">1</span>
+                    </div>
+
+                    <div class="user-item" onclick="selectUser(this, '9876543213')">
+                        <div class="user-avatar">NG</div>
+                        <div class="user-info">
+                            <div class="user-name">Neha Gupta</div>
+                            <div class="user-id">ID: 9876543213</div>
+                        </div>
+                        <div class="user-status offline"></div>
+                    </div>
+
+                    <div class="user-item" onclick="selectUser(this, '9876543214')">
+                        <div class="user-avatar">SK</div>
+                        <div class="user-info">
+                            <div class="user-name">Sunil Kumar</div>
+                            <div class="user-id">ID: 9876543214</div>
+                        </div>
+                        <div class="user-status"></div>
+                    </div>
+
+                    <div class="user-item" onclick="selectUser(this, '9876543215')">
+                        <div class="user-avatar">AP</div>
+                        <div class="user-info">
+                            <div class="user-name">Anita Patel</div>
+                            <div class="user-id">ID: 9876543215</div>
+                        </div>
+                        <div class="user-status offline"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Area -->
+            <div class="message-area">
+                <div class="chat-header">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="user-avatar">RJ</div>
+                        <div>
+                            <h3>Rajesh Jain <span class="admin-badge">Franchise</span></h3>
+                            <p style="color: var(--gray); font-size: 12px;">Last seen: Online now</p>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline" onclick="viewUserDetails()">
+                            <i class="fas fa-user"></i> View Profile
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message received">
+                        <div class="message-bubble">
+                            Hello Admin, I have a question about my recent payout.
+                        </div>
+                        <div class="message-time">10:30 AM</div>
+                    </div>
+
+                    <div class="message sent">
+                        <div class="message-bubble">
+                            Sure, I can help you with that. What would you like to know?
+                        </div>
+                        <div class="message-time">10:32 AM</div>
+                    </div>
+
+                    <div class="message received">
+                        <div class="message-bubble">
+                            My payout of ₹5,000 was approved yesterday but I haven't received it in my bank yet. How long does it take?
+                        </div>
+                        <div class="message-time">10:33 AM</div>
+                    </div>
+
+                    <div class="message sent">
+                        <div class="message-bubble">
+                            Payouts typically take 24-48 hours to reflect in your bank account. If you don't receive it by tomorrow, please let me know and I'll check with the finance team.
+                        </div>
+                        <div class="message-time">10:35 AM</div>
+                    </div>
+
+                    <div class="message received">
+                        <div class="message-bubble">
+                            Okay, thank you for the information. I'll wait until tomorrow.
+                        </div>
+                        <div class="message-time">10:36 AM</div>
+                    </div>
+
+                    <div class="message received">
+                        <div class="message-bubble">
+                            Also, I wanted to ask about the new gold collection. When will it be available?
+                        </div>
+                        <div class="message-time">10:37 AM</div>
+                    </div>
+
+                    <div class="message sent">
+                        <div class="message-bubble">
+                            The new gold collection will be launched next week. I'll send you a notification when it's live.
+                        </div>
+                        <div class="message-time">10:38 AM</div>
+                    </div>
+
+                    <div class="message received">
+                        <div class="message-bubble">
+                            That would be great, thank you!
+                        </div>
+                        <div class="message-time">10:39 AM</div>
+                    </div>
+                </div>
+
+                <div class="chat-footer">
+                    <div class="message-input-container">
+                        <button class="attach-btn" onclick="attachFile()">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <input type="text" class="message-input" placeholder="Type your message..." id="messageInput" onkeypress="handleKeyPress(event)">
+                        <button class="send-btn" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Broadcast Section -->
+                <div class="broadcast-section">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" class="form-control" placeholder="Broadcast message to all users..." id="broadcastInput">
+                        <button class="btn btn-primary" onclick="broadcastMessage()">
+                            <i class="fas fa-bullhorn"></i> Broadcast
+                        </button>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label style="margin-right: 15px;">
+                            <input type="checkbox" id="broadcastAll"> All Users
+                        </label>
+                        <label style="margin-right: 15px;">
+                            <input type="checkbox" id="broadcastFranchise"> Franchise Only
+                        </label>
+                        <label>
+                            <input type="checkbox" id="broadcastActive"> Active Users Only
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedUserId = '9876543210';
+
+        function selectUser(element, userId) {
+            document.querySelectorAll('.user-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+            selectedUserId = userId;
+            
+            // Update chat header
+            const userName = element.querySelector('.user-name').textContent;
+            document.querySelector('.chat-header h3').innerHTML = `${userName} <span class="admin-badge">Franchise</span>`;
+            
+            showNotification(`Chat with ${userName}`, 'info');
+        }
+
+        function searchUsers() {
+            const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+            const users = document.querySelectorAll('.user-item');
+            
+            users.forEach(user => {
+                const name = user.querySelector('.user-name').textContent.toLowerCase();
+                const id = user.querySelector('.user-id').textContent.toLowerCase();
+                
+                if(name.includes(searchTerm) || id.includes(searchTerm)) {
+                    user.style.display = 'flex';
+                } else {
+                    user.style.display = 'none';
+                }
+            });
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if(message) {
+                const chatMessages = document.getElementById('chatMessages');
+                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                chatMessages.innerHTML += `
+                    <div class="message sent">
+                        <div class="message-bubble">
+                            ${message}
+                        </div>
+                        <div class="message-time">${time}</div>
+                    </div>
+                `;
+                
+                input.value = '';
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                showNotification('Message sent', 'success');
+            }
+        }
+
+        function handleKeyPress(event) {
+            if(event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function attachFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*,audio/*';
+            input.onchange = () => {
+                showNotification('File selected for upload', 'info');
+            };
+            input.click();
+        }
+
+        function broadcastMessage() {
+            const message = document.getElementById('broadcastInput').value.trim();
+            
+            if(!message) {
+                showNotification('Please enter a broadcast message', 'error');
+                return;
+            }
+            
+            let target = 'all users';
+            if(document.getElementById('broadcastFranchise').checked) target = 'franchise members';
+            if(document.getElementById('broadcastActive').checked) target = 'active users';
+            
+            if(confirm(`Send broadcast to ${target}?`)) {
+                showNotification(`Broadcast sent to ${target}`, 'success');
+                document.getElementById('broadcastInput').value = '';
+            }
+        }
+
+        function viewUserDetails() {
+            showNotification('Viewing user profile', 'info');
+            // In production, navigate to user profile
+        }
+    </script>
+    <script src="/script.js"></script>
+</body>
+</html>

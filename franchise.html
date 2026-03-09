@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Franchise Dashboard - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .franchise-badge {
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .pin-code-card {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: white;
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+        }
+        .pin-code-card .label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .pin-code-card .value {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 2px;
+        }
+        .delivery-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .delivery-stat-item {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .delivery-stat-item .number {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .delivery-stat-item .label {
+            color: var(--gray);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .pending-delivery {
+            border-left: 4px solid #f59e0b;
+        }
+        .delivered {
+            border-left: 4px solid #10b981;
+        }
+        .in-transit {
+            border-left: 4px solid #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira <span class="franchise-badge">FRANCHISE</span></div>
+            <div class="nav-links">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/franchise" class="active">Franchise</a>
+                <a href="/products">Products</a>
+                <a href="/delivery">Deliveries</a>
+                <a href="/pool">Pool</a>
+                <a href="/income">Income</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Franchise Header -->
+        <div class="grid grid-2" style="margin-bottom: 30px;">
+            <div class="pin-code-card">
+                <div class="label">Your Assigned Pin Code</div>
+                <div class="value" id="franchisePinCode">110001</div>
+                <div style="margin-top: 15px; font-size: 14px;">Delivery Area Exclusive</div>
+            </div>
+            <div class="glass-card">
+                <h3>Franchise Summary</h3>
+                <div style="margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Total Orders Received:</span>
+                        <strong id="totalOrders">156</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Pending Deliveries:</span>
+                        <strong id="pendingDeliveries">23</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Total Delivery Earnings:</span>
+                        <strong id="deliveryEarnings">₹12,450</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Franchise Commission:</span>
+                        <strong id="franchiseCommission">₹45,670</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delivery Stats -->
+        <div class="delivery-stats">
+            <div class="delivery-stat-item pending-delivery">
+                <div class="number" id="pendingCount">12</div>
+                <div class="label">Pending</div>
+            </div>
+            <div class="delivery-stat-item in-transit">
+                <div class="number" id="inTransitCount">8</div>
+                <div class="label">In Transit</div>
+            </div>
+            <div class="delivery-stat-item delivered">
+                <div class="number" id="deliveredCount">136</div>
+                <div class="label">Delivered</div>
+            </div>
+        </div>
+
+        <!-- Pending Deliveries -->
+        <div class="glass-card" style="margin-bottom: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>Pending Deliveries</h2>
+                <button class="btn btn-primary" onclick="refreshDeliveries()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="table-container">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Products</th>
+                            <th>Amount</th>
+                            <th>Delivery Charge</th>
+                            <th>Address</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pendingDeliveriesList">
+                        <tr>
+                            <td>#LI-2024-001</td>
+                            <td>Rajesh Kumar<br><small>9876543210</small></td>
+                            <td>Gold Ring (2g) x1</td>
+                            <td>₹12,000</td>
+                            <td>₹150</td>
+                            <td>123, Street, Delhi</td>
+                            <td><span class="badge badge-warning">Pending</span></td>
+                            <td>
+                                <button class="btn btn-primary btn-small" onclick="markOutForDelivery('ORD001')">
+                                    <i class="fas fa-truck"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>#LI-2024-002</td>
+                            <td>Priya Singh<br><small>9876543211</small></td>
+                            <td>Silver Chain (10g) x2</td>
+                            <td>₹16,000</td>
+                            <td>₹200</td>
+                            <td>456, Avenue, Mumbai</td>
+                            <td><span class="badge badge-warning">Pending</span></td>
+                            <td>
+                                <button class="btn btn-primary btn-small" onclick="markOutForDelivery('ORD002')">
+                                    <i class="fas fa-truck"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- In Transit Deliveries -->
+        <div class="glass-card" style="margin-bottom: 30px;">
+            <h2 style="margin-bottom: 20px;">In Transit</h2>
+            <div class="table-container">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Products</th>
+                            <th>Amount</th>
+                            <th>Delivery Charge</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inTransitList">
+                        <tr>
+                            <td>#LI-2024-003</td>
+                            <td>Amit Sharma<br><small>9876543212</small></td>
+                            <td>Diamond Earrings</td>
+                            <td>₹45,000</td>
+                            <td>₹300</td>
+                            <td><span class="badge badge-primary">Out for Delivery</span></td>
+                            <td>
+                                <button class="btn btn-success btn-small" onclick="markDelivered('ORD003')">
+                                    <i class="fas fa-check"></i> Delivered
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Delivery History -->
+        <div class="glass-card">
+            <h2 style="margin-bottom: 20px;">Recent Deliveries</h2>
+            <div class="table-container">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Products</th>
+                            <th>Delivery Charge</th>
+                            <th>Delivered On</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deliveryHistory">
+                        <tr>
+                            <td>#LI-2024-000</td>
+                            <td>Neha Gupta</td>
+                            <td>Gold Bangles</td>
+                            <td>₹250</td>
+                            <td>2024-01-14 10:30 AM</td>
+                            <td><span class="badge badge-success">Delivered</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delivery Modal -->
+    <div id="deliveryModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Update Delivery Status</h3>
+                <button class="close-btn" onclick="closeModal('deliveryModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="deliveryForm">
+                    <div class="form-group">
+                        <label class="form-label">Delivery Status</label>
+                        <select id="deliveryStatus" class="form-control">
+                            <option value="out_for_delivery">Out for Delivery</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="failed">Delivery Failed</option>
+                            <option value="rescheduled">Rescheduled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Delivery Notes</label>
+                        <textarea id="deliveryNotes" class="form-control" rows="3" placeholder="Any remarks..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="otpVerified"> OTP Verified (Required for delivery)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Delivery Photo (Optional)</label>
+                        <input type="file" id="deliveryPhoto" class="form-control" accept="image/*">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('deliveryModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="updateDelivery()">Update Status</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentOrderId = null;
+
+        function markOutForDelivery(orderId) {
+            currentOrderId = orderId;
+            document.getElementById('deliveryModal').style.display = 'flex';
+        }
+
+        function markDelivered(orderId) {
+            if(confirm('Mark this order as delivered?')) {
+                showNotification('Order marked as delivered', 'success');
+                // In production, API call here
+            }
+        }
+
+        function updateDelivery() {
+            const status = document.getElementById('deliveryStatus').value;
+            const notes = document.getElementById('deliveryNotes').value;
+            const otpVerified = document.getElementById('otpVerified').checked;
+
+            if(status === 'delivered' && !otpVerified) {
+                showNotification('OTP verification required for delivery', 'error');
+                return;
+            }
+
+            showNotification(`Delivery status updated to ${status}`, 'success');
+            closeModal('deliveryModal');
+        }
+
+        function refreshDeliveries() {
+            showNotification('Refreshing deliveries...', 'info');
+            // In production, API call here
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Load franchise data
+        document.addEventListener('DOMContentLoaded', () => {
+            // In production, fetch from API
+            const franchiseData = {
+                pinCode: '110001',
+                totalOrders: 156,
+                pending: 23,
+                earnings: 12450,
+                commission: 45670
+            };
+
+            document.getElementById('franchisePinCode').textContent = franchiseData.pinCode;
+            document.getElementById('totalOrders').textContent = franchiseData.totalOrders;
+            document.getElementById('pendingDeliveries').textContent = franchiseData.pending;
+            document.getElementById('deliveryEarnings').textContent = `₹${franchiseData.earnings}`;
+            document.getElementById('franchiseCommission').textContent = `₹${franchiseData.commission}`;
+        });
+    </script>
+    <script src="/script.js"></script>
+</body>
+</html>

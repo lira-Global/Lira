@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purchase - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira</div>
+            <div class="nav-links">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/products">Products</a>
+                <a href="/purchase" class="active">Checkout</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="grid grid-2">
+            <div class="glass-card">
+                <h2 style="margin-bottom: 20px;">Your Cart</h2>
+                <div id="cartItems" style="margin-bottom: 20px;"></div>
+                
+                <div style="border-top: 2px solid #e2e8f0; padding-top: 20px;">
+                    <h3>Total Amount: <span id="totalAmount">₹0</span></h3>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <h2 style="margin-bottom: 20px;">Checkout</h2>
+                
+                <div style="margin-bottom: 20px;">
+                    <label class="form-label">Purchase Type</label>
+                    <div>
+                        <label style="margin-right: 20px;">
+                            <input type="radio" name="purchaseType" value="regular" checked> Regular Buy
+                        </label>
+                        <label>
+                            <input type="radio" name="purchaseType" value="franchise"> Franchise Buy
+                        </label>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label class="form-label">Payment Method</label>
+                    <div>
+                        <label style="margin-right: 20px;">
+                            <input type="radio" name="paymentMethod" value="wallet" checked> Main Wallet
+                        </label>
+                        <label>
+                            <input type="radio" name="paymentMethod" value="monthWallet"> 12 Month Wallet
+                        </label>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%;" onclick="checkout()">
+                    Place Order
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

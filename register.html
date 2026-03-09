@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/products">Products</a>
+                <a href="/user-login">Login</a>
+                <a href="/register" class="active">Register</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 80px);">
+        <div class="glass-card" style="max-width: 500px; width: 100%;">
+            <h1 style="text-align: center; margin-bottom: 30px; color: var(--primary);">Create Account</h1>
+            
+            <form id="registerForm">
+                <div class="form-group">
+                    <label class="form-label">Sponsor ID</label>
+                    <input type="text" id="sponsorId" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="username" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mobile Number</label>
+                    <input type="tel" id="mobile" class="form-control" maxlength="10" pattern="\d{10}" required>
+                    <small style="color: var(--gray);">Your User ID and Password will be your mobile number</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" id="email" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">CAPTCHA</label>
+                    <div style="display: flex; gap: 10px;">
+                        <div id="captchaDisplay" style="background: #f0f0f0; padding: 12px 20px; border-radius: 8px; font-family: monospace; font-size: 20px; letter-spacing: 3px;"></div>
+                        <button type="button" onclick="generateCaptcha()" class="btn btn-outline" style="padding: 8px 15px;">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <input type="text" id="captcha" class="form-control" placeholder="Enter CAPTCHA" style="margin-top: 10px;" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" required> I agree to the Terms & Conditions
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Register</button>
+            </form>
+
+            <div style="text-align: center; margin-top: 20px;">
+                Already have an account? <a href="/user-login" style="color: var(--primary);">Login</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

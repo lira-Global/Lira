@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Fund - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira</div>
+            <div class="nav-links">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/wallet">Wallet</a>
+                <a href="/add-fund" class="active">Add Fund</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="grid grid-2">
+            <!-- Bank Details -->
+            <div class="glass-card">
+                <h2 style="margin-bottom: 20px;">Bank Details</h2>
+                <div id="bankDetails">
+                    <div class="qr-container">
+                        <img src="/uploads/qr-sample.png" alt="QR Code" class="qr-image">
+                    </div>
+                    <div class="bank-details">
+                        <div class="bank-detail-item">
+                            <span>Bank Name:</span>
+                            <strong>HDFC Bank</strong>
+                        </div>
+                        <div class="bank-detail-item">
+                            <span>Account Number:</span>
+                            <strong>12345678901234</strong>
+                        </div>
+                        <div class="bank-detail-item">
+                            <span>IFSC Code:</span>
+                            <strong>HDFC0001234</strong>
+                        </div>
+                        <div class="bank-detail-item">
+                            <span>Account Holder:</span>
+                            <strong>Lira Private Limited</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Fund Form -->
+            <div class="glass-card">
+                <h2 style="margin-bottom: 20px;">Add Fund Request</h2>
+                
+                <form id="fundForm">
+                    <div class="form-group">
+                        <label class="form-label">Name as per Bank</label>
+                        <input type="text" id="name" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Amount (₹)</label>
+                        <input type="number" id="amount" class="form-control" min="100" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">UTR Number</label>
+                        <input type="text" id="utr" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Payment Proof (Screenshot)</label>
+                        <input type="file" id="proof" class="form-control" accept="image/*" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description (Optional)</label>
+                        <textarea id="description" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Request</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

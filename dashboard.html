@@ -6,6 +6,66 @@
     <title>Dashboard - Lira</title>
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .delivery-code-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        .delivery-code {
+            font-size: 72px;
+            font-weight: 800;
+            letter-spacing: 15px;
+            margin: 20px 0;
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 16px;
+            font-family: monospace;
+        }
+        .code-timer {
+            font-size: 18px;
+            margin: 15px 0;
+        }
+        .code-instruction {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 12px;
+            margin: 15px 0;
+        }
+        .refresh-btn {
+            background: white;
+            color: var(--primary);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .delivery-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-out-for-delivery { background: #f59e0b; color: white; }
+        .status-delivered { background: #10b981; color: white; }
+        .status-processing { background: #3b82f6; color: white; }
+    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -27,6 +87,9 @@
     <div class="container">
         <div id="activationStatus"></div>
 
+        <!-- DELIVERY CODE SECTION - Shows when order is out for delivery -->
+        <div id="deliveryCodeSection" style="display: none;"></div>
+
         <div class="grid grid-4" style="margin-bottom: 30px;">
             <div class="stat-card">
                 <h3>Wallet Balance</h3>
@@ -44,6 +107,12 @@
                 <h3>Today's Income</h3>
                 <div class="value" id="todayIncome">₹0</div>
             </div>
+        </div>
+
+        <!-- Active Deliveries List -->
+        <div class="glass-card" style="margin-bottom: 30px;" id="activeDeliveriesCard" style="display: none;">
+            <h2 style="margin-bottom: 20px;">Your Active Deliveries</h2>
+            <div id="activeDeliveriesList"></div>
         </div>
 
         <div class="grid grid-2" style="margin-bottom: 30px;">
@@ -72,6 +141,223 @@
         </div>
     </div>
 
+    <script>
+        let activeOrderId = null;
+        let codeRefreshInterval = null;
+
+        // Load delivery code for active orders
+        async function loadDeliveryCode() {
+            try {
+                const response = await fetch('/api/user/active-deliveries', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                
+                const deliveries = await response.json();
+                
+                const outForDelivery = deliveries.filter(d => d.deliveryStatus === 'out_for_delivery');
+                
+                if(outForDelivery.length > 0) {
+                    // Show first out-for-delivery order
+                    const order = outForDelivery[0];
+                    activeOrderId = order._id;
+                    
+                    // Fetch delivery code
+                    const codeResponse = await fetch(`/api/delivery/code/${order._id}`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        }
+                    });
+                    
+                    const codeData = await codeResponse.json();
+                    
+                    if(codeData.success) {
+                        displayDeliveryCode(order, codeData);
+                    }
+                }
+                
+                // Show all active deliveries in list
+                if(deliveries.length > 0) {
+                    displayActiveDeliveries(deliveries);
+                }
+                
+            } catch (error) {
+                console.error('Failed to load delivery code:', error);
+            }
+        }
+
+        function displayDeliveryCode(order, codeData) {
+            const section = document.getElementById('deliveryCodeSection');
+            
+            const expiryTime = new Date(codeData.validUntil).getTime();
+            const now = new Date().getTime();
+            const timeLeft = Math.max(0, Math.floor((expiryTime - now) / 1000 / 60)); // minutes left
+            
+            section.style.display = 'block';
+            section.innerHTML = `
+                <div class="delivery-code-card">
+                    <h3 style="color: white; margin-bottom: 10px;">🚚 Active Delivery</h3>
+                    <p style="opacity: 0.9;">Order #${order.orderId}</p>
+                    
+                    <div class="delivery-code" id="displayCode">${codeData.deliveryCode}</div>
+                    
+                    <div class="code-timer">
+                        <i class="fas fa-clock"></i> Code valid until: ${new Date(codeData.validUntil).toLocaleTimeString()}
+                        <br>
+                        <small id="timerMessage">${timeLeft > 0 ? timeLeft + ' minutes remaining' : 'Expiring soon'}</small>
+                    </div>
+                    
+                    <div class="code-instruction">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>IMPORTANT:</strong> Share this 6-digit code ONLY with the delivery person at time of delivery. Do not share with anyone else.
+                    </div>
+                    
+                    <button class="refresh-btn" onclick="refreshDeliveryCode()">
+                        <i class="fas fa-sync-alt"></i> Generate New Code
+                    </button>
+                </div>
+            `;
+            
+            // Start timer countdown
+            startCodeTimer(expiryTime);
+        }
+
+        function startCodeTimer(expiryTime) {
+            if(codeRefreshInterval) clearInterval(codeRefreshInterval);
+            
+            codeRefreshInterval = setInterval(() => {
+                const now = new Date().getTime();
+                const timeLeft = expiryTime - now;
+                
+                if(timeLeft <= 0) {
+                    document.getElementById('timerMessage').innerHTML = '⚠️ Code expired! Generate new one.';
+                    document.getElementById('displayCode').style.opacity = '0.5';
+                    clearInterval(codeRefreshInterval);
+                } else {
+                    const minutes = Math.floor(timeLeft / 1000 / 60);
+                    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                    document.getElementById('timerMessage').innerHTML = `${minutes}m ${seconds}s remaining`;
+                }
+            }, 1000);
+        }
+
+        async function refreshDeliveryCode() {
+            if(!activeOrderId) return;
+            
+            try {
+                const response = await fetch(`/api/delivery/refresh-code/${activeOrderId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if(data.success) {
+                    document.getElementById('displayCode').textContent = data.deliveryCode;
+                    document.getElementById('displayCode').style.opacity = '1';
+                    
+                    const expiryTime = new Date(data.validUntil).getTime();
+                    startCodeTimer(expiryTime);
+                    
+                    showNotification('New delivery code generated!', 'success');
+                }
+            } catch (error) {
+                showNotification('Failed to refresh code', 'error');
+            }
+        }
+
+        function displayActiveDeliveries(deliveries) {
+            const card = document.getElementById('activeDeliveriesCard');
+            const list = document.getElementById('activeDeliveriesList');
+            
+            if(!list) return;
+            
+            card.style.display = 'block';
+            
+            list.innerHTML = deliveries.map(order => {
+                const statusClass = {
+                    'pending': 'badge-warning',
+                    'processing': 'badge-primary',
+                    'out_for_delivery': 'badge-warning',
+                    'delivered': 'badge-success'
+                }[order.deliveryStatus] || 'badge-secondary';
+                
+                const statusText = order.deliveryStatus.replace(/_/g, ' ').toUpperCase();
+                
+                return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #e2e8f0;">
+                        <div>
+                            <strong>Order #${order.orderId}</strong>
+                            <p style="font-size: 12px; color: var(--gray);">${new Date(order.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="badge ${statusClass}">${statusText}</span>
+                            <p style="margin-top: 5px;"><strong>₹${order.totalAmount}</strong></p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Load dashboard data
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                document.getElementById('walletBalance').textContent = `₹${data.user.wallet}`;
+                document.getElementById('monthWallet').textContent = `₹${data.user.monthWallet}`;
+                document.getElementById('todayPurchases').textContent = data.todayPurchases;
+                document.getElementById('todayIncome').textContent = `₹${data.todayIncome}`;
+                
+                if(data.bestPerformer) {
+                    document.getElementById('bestPerformer').innerHTML = `
+                        <div class="stat-card">
+                            <h3>Best Performer Today</h3>
+                            <div class="value">${data.bestPerformer.user?.[0]?.username || 'N/A'}</div>
+                            <p>₹${data.bestPerformer.total}</p>
+                        </div>
+                    `;
+                }
+                
+                if(data.bestEarner) {
+                    document.getElementById('bestEarner').innerHTML = `
+                        <div class="stat-card">
+                            <h3>Best Earner Today</h3>
+                            <div class="value">${data.bestEarner.user?.[0]?.username || 'N/A'}</div>
+                            <p>₹${data.bestEarner.total}</p>
+                        </div>
+                    `;
+                }
+                
+                // Load delivery code if any active deliveries
+                if(data.activeDeliveries > 0) {
+                    loadDeliveryCode();
+                }
+                
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+        });
+
+        // Cleanup interval on page unload
+        window.addEventListener('beforeunload', () => {
+            if(codeRefreshInterval) clearInterval(codeRefreshInterval);
+        });
+    </script>
     <script src="/script.js"></script>
 </body>
 </html>

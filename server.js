@@ -98,6 +98,7 @@ const UserSchema = new mongoose.Schema({
     franchiseDate: { type: Date },
     birthDate: { type: Date },
     anniversaryDate: { type: Date },
+    role: { type: String, enum: ['user', 'franchise', 'delivery', 'admin'], default: 'user' },
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -148,6 +149,7 @@ const FundRequestSchema = new mongoose.Schema({
 
 const PurchaseSchema = new mongoose.Schema({
     userId: { type: String, required: true },
+    orderId: { type: String, unique: true },
     products: [{
         productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
         name: String,
@@ -157,9 +159,40 @@ const PurchaseSchema = new mongoose.Schema({
     totalAmount: { type: Number, required: true },
     franchiseId: { type: String },
     type: { type: String, enum: ['regular', 'franchise', 'monthWallet'], default: 'regular' },
-    deliveryStatus: { type: String, enum: ['pending', 'processing', 'shipped', 'delivered'], default: 'pending' },
+    deliveryStatus: { 
+        type: String, 
+        enum: ['pending', 'processing', 'out_for_delivery', 'delivered', 'failed', 'cancelled'], 
+        default: 'pending' 
+    },
     deliveryCharge: { type: Number },
+    deliveryAddress: {
+        street: String,
+        city: String,
+        state: String,
+        pincode: String,
+        landmark: String
+    },
+    // Delivery Code System (NO SMS/OTP)
+    deliveryCode: { type: String },
+    codeGeneratedAt: { type: Date },
+    codeExpiry: { type: Date },
+    deliveredAt: { type: Date },
+    deliveredBy: { type: String }, // franchise/delivery person ID
+    deliveryNotes: { type: String },
+    deliveryPhoto: { type: String }, // Optional proof photo
     createdAt: { type: Date, default: Date.now }
+});
+
+// Generate unique order ID before saving
+PurchaseSchema.pre('save', async function(next) {
+    if (!this.orderId) {
+        const date = new Date();
+        const year = date.getFullYear().toString().slice(-2);
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const count = await Purchase.countDocuments();
+        this.orderId = `LI-${year}${month}-${(count + 1).toString().padStart(4, '0')}`;
+    }
+    next();
 });
 
 const IncomeSchema = new mongoose.Schema({
@@ -251,6 +284,25 @@ const adminMiddleware = async (req, res, next) => {
     }
 };
 
+const franchiseMiddleware = async (req, res, next) => {
+    try {
+        const user = await User.findOne({ userId: req.userId });
+        if (!user || !user.franchise) {
+            return res.status(403).json({ error: 'Franchise access required' });
+        }
+        next();
+    } catch (error) {
+        res.status(403).json({ error: 'Franchise access required' });
+    }
+};
+
+// ==================== DELIVERY CODE FUNCTIONS ====================
+
+// Generate random 6-digit delivery code
+function generateDeliveryCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 // ==================== API ROUTES ====================
 
 // Generate CAPTCHA
@@ -312,7 +364,8 @@ app.post('/api/register', async (req, res) => {
             mobile,
             email,
             position,
-            leg
+            leg,
+            role: 'user'
         });
 
         await user.save();
@@ -345,7 +398,7 @@ app.post('/api/login', async (req, res) => {
         }
 
         const token = jwt.sign(
-            { userId: user.userId, mobile: user.mobile },
+            { userId: user.userId, mobile: user.mobile, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
@@ -362,7 +415,8 @@ app.post('/api/login', async (req, res) => {
                 email: user.email,
                 active: user.active,
                 wallet: user.wallet,
-                franchise: user.franchise
+                franchise: user.franchise,
+                role: user.role
             }
         });
     } catch (error) {
@@ -465,7 +519,7 @@ app.post('/api/add-month-wallet', authMiddleware, async (req, res) => {
 
         // Notify admin after 12 months
         if (user.monthWalletHistory.length === 12) {
-            // Send notification to admin (implement based on your notification system)
+            // Send notification to admin
         }
 
         res.json({ success: true, message: 'Added to month wallet successfully' });
@@ -478,15 +532,17 @@ app.post('/api/add-month-wallet', authMiddleware, async (req, res) => {
 // Purchase Product
 app.post('/api/purchase', authMiddleware, async (req, res) => {
     try {
-        const { products, type } = req.body;
+        const { products, type, address } = req.body;
         const user = await User.findOne({ userId: req.userId });
 
         let totalAmount = 0;
+        let totalDeliveryCharge = 0;
         const productDetails = [];
 
         for (const item of products) {
             const product = await Product.findById(item.productId);
             totalAmount += product.totalAmount * item.quantity;
+            totalDeliveryCharge += product.deliveryCharge * item.quantity;
             productDetails.push({
                 productId: product._id,
                 name: product.name,
@@ -523,7 +579,7 @@ app.post('/api/purchase', authMiddleware, async (req, res) => {
         if (!user.franchise && user.active) {
             const franchise = await User.findOne({ 
                 franchise: true, 
-                franchisePinCode: user.franchisePinCode || { $exists: true }
+                franchisePinCode: address?.pincode || { $exists: true }
             });
             
             if (franchise) {
@@ -544,12 +600,15 @@ app.post('/api/purchase', authMiddleware, async (req, res) => {
             userId: user.userId,
             products: productDetails,
             totalAmount,
+            deliveryCharge: totalDeliveryCharge,
             franchiseId,
             type,
-            deliveryStatus: 'pending'
+            deliveryStatus: 'pending',
+            deliveryAddress: address
         });
 
         await purchase.save();
+        await user.save();
 
         // Distribute income (10 levels)
         await distributeIncome(user, purchase, products);
@@ -557,7 +616,265 @@ app.post('/api/purchase', authMiddleware, async (req, res) => {
         res.json({ 
             success: true, 
             message: 'Purchase successful',
+            orderId: purchase.orderId,
             purchaseId: purchase._id
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// ==================== DELIVERY CODE API ROUTES ====================
+
+// Get active deliveries for user (shows delivery code)
+app.get('/api/user/active-deliveries', authMiddleware, async (req, res) => {
+    try {
+        const deliveries = await Purchase.find({
+            userId: req.userId,
+            deliveryStatus: { $in: ['processing', 'out_for_delivery'] }
+        }).sort({ createdAt: -1 });
+
+        res.json(deliveries);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Get delivery code for specific order (USER SIDE)
+app.get('/api/delivery/code/:orderId', authMiddleware, async (req, res) => {
+    try {
+        const order = await Purchase.findById(req.params.orderId);
+        
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Verify this order belongs to logged-in user
+        if (order.userId !== req.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        // Check if order is out for delivery
+        if (order.deliveryStatus !== 'out_for_delivery') {
+            return res.status(400).json({ 
+                error: 'Delivery code not available yet',
+                status: order.deliveryStatus
+            });
+        }
+
+        // Generate new code if not exists or expired
+        if (!order.deliveryCode || new Date() > order.codeExpiry) {
+            order.deliveryCode = generateDeliveryCode();
+            order.codeGeneratedAt = new Date();
+            order.codeExpiry = new Date(Date.now() + 4 * 60 * 60 * 1000); // 4 hours valid
+            await order.save();
+        }
+
+        res.json({
+            success: true,
+            orderId: order.orderId,
+            deliveryCode: order.deliveryCode,
+            validUntil: order.codeExpiry,
+            message: 'Share this code ONLY with delivery person'
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Refresh delivery code (USER SIDE - generate new code)
+app.post('/api/delivery/refresh-code/:orderId', authMiddleware, async (req, res) => {
+    try {
+        const order = await Purchase.findById(req.params.orderId);
+        
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Verify ownership
+        if (order.userId !== req.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        // Generate new code
+        order.deliveryCode = generateDeliveryCode();
+        order.codeGeneratedAt = new Date();
+        order.codeExpiry = new Date(Date.now() + 4 * 60 * 60 * 1000);
+        await order.save();
+
+        res.json({
+            success: true,
+            deliveryCode: order.deliveryCode,
+            validUntil: order.codeExpiry
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Get pending deliveries for franchise/delivery boy (FRANCHISE SIDE)
+app.get('/api/franchise/pending-deliveries', authMiddleware, franchiseMiddleware, async (req, res) => {
+    try {
+        const deliveries = await Purchase.find({
+            franchiseId: req.userId,
+            deliveryStatus: { $in: ['pending', 'processing', 'out_for_delivery'] }
+        }).sort({ createdAt: 1 });
+
+        res.json(deliveries);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Update delivery status (FRANCHISE SIDE)
+app.post('/api/delivery/update-status/:orderId', authMiddleware, franchiseMiddleware, async (req, res) => {
+    try {
+        const { status, notes } = req.body;
+        const order = await Purchase.findById(req.params.orderId);
+
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Verify franchise assigned to this order
+        if (order.franchiseId !== req.userId) {
+            return res.status(403).json({ error: 'Not authorized for this order' });
+        }
+
+        // Update status
+        order.deliveryStatus = status;
+        if (notes) order.deliveryNotes = notes;
+
+        // If marking as out for delivery, generate delivery code
+        if (status === 'out_for_delivery' && !order.deliveryCode) {
+            order.deliveryCode = generateDeliveryCode();
+            order.codeGeneratedAt = new Date();
+            order.codeExpiry = new Date(Date.now() + 4 * 60 * 60 * 1000);
+        }
+
+        await order.save();
+
+        res.json({ 
+            success: true, 
+            message: `Delivery status updated to ${status}`,
+            deliveryCode: order.deliveryCode // Send code if generated
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Verify delivery code and complete delivery (FRANCHISE SIDE)
+app.post('/api/delivery/verify-code', authMiddleware, franchiseMiddleware, async (req, res) => {
+    try {
+        const { orderId, enteredCode, photoProof } = req.body;
+        
+        const order = await Purchase.findById(orderId);
+        
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Verify franchise assigned to this order
+        if (order.franchiseId !== req.userId) {
+            return res.status(403).json({ error: 'Not authorized for this order' });
+        }
+
+        // Check if order is out for delivery
+        if (order.deliveryStatus !== 'out_for_delivery') {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Order is not out for delivery',
+                currentStatus: order.deliveryStatus
+            });
+        }
+
+        // Check if code expired
+        if (new Date() > order.codeExpiry) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Code expired. Ask customer to refresh code.'
+            });
+        }
+
+        // Verify code
+        if (order.deliveryCode === enteredCode) {
+            // Code matched - mark as delivered
+            order.deliveryStatus = 'delivered';
+            order.deliveredAt = new Date();
+            order.deliveredBy = req.userId;
+            if (photoProof) order.deliveryPhoto = photoProof;
+            
+            await order.save();
+            
+            // Credit delivery charge to franchise
+            const franchise = await User.findOne({ userId: order.franchiseId });
+            if (franchise) {
+                franchise.wallet += order.deliveryCharge || 0;
+                await franchise.save();
+                
+                // Record income
+                const income = new Income({
+                    userId: franchise.userId,
+                    fromUserId: order.userId,
+                    amount: order.deliveryCharge,
+                    type: 'delivery',
+                    purchaseId: order._id
+                });
+                await income.save();
+            }
+            
+            res.json({ 
+                success: true, 
+                message: '✅ Delivery successful! Code verified.'
+            });
+        } else {
+            // Wrong code
+            res.status(400).json({ 
+                success: false, 
+                error: '❌ Invalid code. Please ask customer for correct code.'
+            });
+        }
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Get delivery history (FRANCHISE SIDE)
+app.get('/api/franchise/delivery-history', authMiddleware, franchiseMiddleware, async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const skip = (page - 1) * limit;
+
+        const deliveries = await Purchase.find({
+            franchiseId: req.userId,
+            deliveryStatus: 'delivered'
+        })
+        .sort({ deliveredAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+
+        const total = await Purchase.countDocuments({
+            franchiseId: req.userId,
+            deliveryStatus: 'delivered'
+        });
+
+        res.json({
+            deliveries,
+            total,
+            page: parseInt(page),
+            totalPages: Math.ceil(total / limit)
         });
     } catch (error) {
         console.error(error);
@@ -1090,6 +1407,12 @@ app.get('/api/dashboard', authMiddleware, async (req, res) => {
             createdAt: { $gte: today }
         });
 
+        // Get active deliveries (for delivery code display)
+        const activeDeliveries = await Purchase.find({
+            userId: req.userId,
+            deliveryStatus: 'out_for_delivery'
+        });
+
         // Get best performer of the day
         const bestPerformer = await Purchase.aggregate([
             { $match: { createdAt: { $gte: today } } },
@@ -1134,7 +1457,8 @@ app.get('/api/dashboard', authMiddleware, async (req, res) => {
             bestPerformer: bestPerformer[0] || null,
             bestEarner: bestEarner[0] || null,
             todayBirthdays,
-            todayAnniversaries
+            todayAnniversaries,
+            activeDeliveries: activeDeliveries.length
         });
     } catch (error) {
         console.error(error);

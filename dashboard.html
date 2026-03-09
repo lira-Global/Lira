@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira</div>
+            <div class="nav-links">
+                <a href="/dashboard" class="active">Dashboard</a>
+                <a href="/profile">Profile</a>
+                <a href="/wallet">Wallet</a>
+                <a href="/products">Products</a>
+                <a href="/purchase">Cart <span id="cartCount" class="badge badge-primary" style="display: none;">0</span></a>
+                <a href="/income">Income</a>
+                <a href="/user-message">Messages</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="activationStatus"></div>
+
+        <div class="grid grid-4" style="margin-bottom: 30px;">
+            <div class="stat-card">
+                <h3>Wallet Balance</h3>
+                <div class="value" id="walletBalance">₹0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Month Wallet</h3>
+                <div class="value" id="monthWallet">₹0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Today's Purchases</h3>
+                <div class="value" id="todayPurchases">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Today's Income</h3>
+                <div class="value" id="todayIncome">₹0</div>
+            </div>
+        </div>
+
+        <div class="grid grid-2" style="margin-bottom: 30px;">
+            <div id="bestPerformer"></div>
+            <div id="bestEarner"></div>
+        </div>
+
+        <div id="greetings" style="margin-bottom: 30px;"></div>
+
+        <div class="glass-card">
+            <h2 style="margin-bottom: 20px;">Quick Actions</h2>
+            <div class="grid grid-4">
+                <button class="btn btn-primary" onclick="window.location.href='/add-fund'">
+                    <i class="fas fa-plus-circle"></i> Add Fund
+                </button>
+                <button class="btn btn-primary" onclick="window.location.href='/purchase'">
+                    <i class="fas fa-shopping-bag"></i> Buy Products
+                </button>
+                <button class="btn btn-primary" onclick="window.location.href='/payout'">
+                    <i class="fas fa-money-bill-wave"></i> Request Payout
+                </button>
+                <button class="btn btn-primary" onclick="window.location.href='/franchise'">
+                    <i class="fas fa-store"></i> Franchise
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

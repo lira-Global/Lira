@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira</div>
+            <div class="nav-links">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/profile">Profile</a>
+                <a href="/wallet" class="active">Wallet</a>
+                <a href="/add-fund">Add Fund</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="grid grid-2" style="margin-bottom: 30px;">
+            <div class="stat-card">
+                <h3>Main Wallet Balance</h3>
+                <div class="value" id="mainWallet">₹0</div>
+                <button class="btn btn-primary" onclick="window.location.href='/add-fund'" style="margin-top: 15px;">
+                    Add Fund
+                </button>
+            </div>
+            <div class="stat-card">
+                <h3>12 Month Wallet</h3>
+                <div class="value" id="monthWallet">₹0</div>
+                <div style="margin-top: 15px;">
+                    <input type="number" id="monthAmount" class="form-control" placeholder="Enter amount" style="width: 200px; display: inline-block;">
+                    <button class="btn btn-primary" onclick="addToMonthWallet()">Add</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card" style="margin-bottom: 30px;">
+            <h2 style="margin-bottom: 20px;">Month Wallet History</h2>
+            <div class="progress-bar" style="margin-bottom: 20px;">
+                <div class="progress-fill" id="monthProgress" style="width: 0%;"></div>
+            </div>
+            <div class="table-container">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Year</th>
+                            <th>Amount Added</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthHistory">
+                        <tr>
+                            <td colspan="4" style="text-align: center;">No history available</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <h2 style="margin-bottom: 20px;">Fund Request History</h2>
+            <div class="table-container">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>Amount</th>
+                            <th>UTR</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fundRequests">
+                        <tr>
+                            <td colspan="4" style="text-align: center;">No requests found</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

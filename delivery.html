@@ -45,75 +45,65 @@
         .delivery-card.processing {
             border-left-color: #3b82f6;
         }
-        .delivery-card.shipped {
+        .delivery-card.out_for_delivery {
             border-left-color: #8b5cf6;
         }
         .delivery-card.delivered {
             border-left-color: #10b981;
         }
-        .timeline {
-            display: flex;
-            justify-content: space-between;
+        .code-verification-section {
+            background: #f0f9ff;
+            border-radius: 16px;
+            padding: 25px;
             margin: 20px 0;
-            position: relative;
+            border: 2px dashed var(--primary);
         }
-        .timeline::before {
-            content: '';
-            position: absolute;
-            top: 15px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: #e2e8f0;
-            z-index: 1;
-        }
-        .timeline-step {
-            position: relative;
-            z-index: 2;
+        .code-input {
+            font-size: 32px;
+            letter-spacing: 10px;
             text-align: center;
-            flex: 1;
+            font-family: monospace;
+            padding: 15px;
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
         }
-        .timeline-icon {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-box {
             background: white;
-            border: 2px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 5px;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
-        .timeline-step.completed .timeline-icon {
-            background: #10b981;
-            border-color: #10b981;
-            color: white;
-        }
-        .timeline-step.active .timeline-icon {
-            border-color: var(--primary);
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
             color: var(--primary);
         }
-        .tracking-map {
-            height: 200px;
-            background: #f8fafc;
-            border-radius: 12px;
-            margin: 20px 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .stat-label {
             color: var(--gray);
+            font-size: 12px;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="navbar-container">
-            <div class="logo">Lira</div>
+            <div class="logo">Lira <span class="franchise-badge" style="background: #f59e0b; padding: 3px 10px; border-radius: 20px; font-size: 12px;">DELIVERY</span></div>
             <div class="nav-links">
-                <a href="/dashboard">Dashboard</a>
+                <a href="/franchise">Dashboard</a>
                 <a href="/delivery" class="active">Deliveries</a>
-                <a href="/franchise">Franchise</a>
                 <a href="/products">Products</a>
+                <a href="/income">Income</a>
                 <a href="#" onclick="logout()">Logout</a>
             </div>
         </div>
@@ -121,22 +111,22 @@
 
     <div class="container">
         <!-- Delivery Stats -->
-        <div class="grid grid-4" style="margin-bottom: 30px;">
-            <div class="stat-card">
-                <h3>Total Deliveries</h3>
-                <div class="value" id="totalDeliveries">246</div>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-number" id="pendingCount">0</div>
+                <div class="stat-label">Pending</div>
             </div>
-            <div class="stat-card">
-                <h3>Pending</h3>
-                <div class="value" id="pendingDeliveries">18</div>
+            <div class="stat-box">
+                <div class="stat-number" id="processingCount">0</div>
+                <div class="stat-label">Processing</div>
             </div>
-            <div class="stat-card">
-                <h3>In Transit</h3>
-                <div class="value" id="inTransitDeliveries">12</div>
+            <div class="stat-box">
+                <div class="stat-number" id="outForDeliveryCount">0</div>
+                <div class="stat-label">Out for Delivery</div>
             </div>
-            <div class="stat-card">
-                <h3>Delivered Today</h3>
-                <div class="value" id="deliveredToday">8</div>
+            <div class="stat-box">
+                <div class="stat-number" id="deliveredTodayCount">0</div>
+                <div class="stat-label">Delivered Today</div>
             </div>
         </div>
 
@@ -145,169 +135,262 @@
             <button class="delivery-filter-btn active" onclick="filterDeliveries('all')">All</button>
             <button class="delivery-filter-btn" onclick="filterDeliveries('pending')">Pending</button>
             <button class="delivery-filter-btn" onclick="filterDeliveries('processing')">Processing</button>
-            <button class="delivery-filter-btn" onclick="filterDeliveries('shipped')">Shipped</button>
+            <button class="delivery-filter-btn" onclick="filterDeliveries('out_for_delivery')">Out for Delivery</button>
             <button class="delivery-filter-btn" onclick="filterDeliveries('delivered')">Delivered</button>
         </div>
 
         <!-- Delivery List -->
-        <div id="deliveryList">
-            <!-- Pending Delivery -->
-            <div class="delivery-card pending" data-status="pending">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div>
-                        <span class="badge badge-warning">Pending</span>
-                        <h3 style="margin: 10px 0;">Order #LI-2024-001</h3>
-                        <p><i class="fas fa-user"></i> Rajesh Kumar - 9876543210</p>
-                        <p><i class="fas fa-map-marker"></i> 123, Main Street, Delhi - 110001</p>
-                    </div>
-                    <div style="text-align: right;">
-                        <p><strong>Amount:</strong> ₹12,000</p>
-                        <p><strong>Delivery Charge:</strong> ₹150</p>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button class="btn btn-primary" onclick="updateDeliveryStatus('LI-2024-001', 'processing')">
-                        <i class="fas fa-check"></i> Accept Delivery
-                    </button>
-                    <button class="btn btn-outline" onclick="viewDetails('LI-2024-001')">
-                        <i class="fas fa-eye"></i> Details
-                    </button>
-                </div>
-            </div>
+        <div id="deliveryList"></div>
+    </div>
 
-            <!-- Processing Delivery -->
-            <div class="delivery-card processing" data-status="processing">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div>
-                        <span class="badge badge-primary">Processing</span>
-                        <h3 style="margin: 10px 0;">Order #LI-2024-002</h3>
-                        <p><i class="fas fa-user"></i> Priya Singh - 9876543211</p>
-                        <p><i class="fas fa-map-marker"></i> 456, Park Avenue, Mumbai - 400001</p>
-                    </div>
-                    <div style="text-align: right;">
-                        <p><strong>Amount:</strong> ₹16,000</p>
-                        <p><strong>Delivery Charge:</strong> ₹200</p>
-                    </div>
+    <!-- Code Verification Modal -->
+    <div id="codeModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Verify Delivery Code</h3>
+                <button class="close-btn" onclick="closeModal('codeModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h4 id="verifyOrderId">Order #LI-001</h4>
+                    <p>Customer: <span id="verifyCustomer">Rajesh Kumar</span></p>
                 </div>
                 
-                <!-- Timeline -->
-                <div class="timeline">
-                    <div class="timeline-step completed">
-                        <div class="timeline-icon"><i class="fas fa-check"></i></div>
-                        <small>Order Placed</small>
-                    </div>
-                    <div class="timeline-step active">
-                        <div class="timeline-icon"><i class="fas fa-box"></i></div>
-                        <small>Processing</small>
-                    </div>
-                    <div class="timeline-step">
-                        <div class="timeline-icon"><i class="fas fa-truck"></i></div>
-                        <small>Shipped</small>
-                    </div>
-                    <div class="timeline-step">
-                        <div class="timeline-icon"><i class="fas fa-home"></i></div>
-                        <small>Delivered</small>
-                    </div>
+                <div class="form-group">
+                    <label class="form-label">Enter 6-Digit Code from Customer</label>
+                    <input type="text" id="verificationCode" class="code-input" maxlength="6" pattern="\d{6}" inputmode="numeric" placeholder="123456" autocomplete="off">
+                    <p style="text-align: center; margin-top: 10px; color: var(--gray);">Ask customer to read code from their dashboard</p>
                 </div>
 
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button class="btn btn-primary" onclick="updateDeliveryStatus('LI-2024-002', 'shipped')">
-                        <i class="fas fa-truck"></i> Mark Shipped
-                    </button>
-                    <button class="btn btn-outline" onclick="viewTracking('LI-2024-002')">
-                        <i class="fas fa-map"></i> Track
-                    </button>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="confirmDelivery"> I confirm customer has received the product
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Delivery Photo (Optional)</label>
+                    <input type="file" id="deliveryPhoto" class="form-control" accept="image/*">
                 </div>
             </div>
-
-            <!-- Shipped Delivery -->
-            <div class="delivery-card shipped" data-status="shipped">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div>
-                        <span class="badge badge-secondary">Shipped</span>
-                        <h3 style="margin: 10px 0;">Order #LI-2024-003</h3>
-                        <p><i class="fas fa-user"></i> Amit Sharma - 9876543212</p>
-                        <p><i class="fas fa-map-marker"></i> 789, Lake Road, Bangalore - 560001</p>
-                    </div>
-                    <div style="text-align: right;">
-                        <p><strong>Amount:</strong> ₹45,000</p>
-                        <p><strong>Delivery Charge:</strong> ₹300</p>
-                    </div>
-                </div>
-
-                <!-- Tracking Info -->
-                <div class="tracking-map">
-                    <i class="fas fa-map-marked-alt" style="font-size: 48px; margin-right: 10px;"></i>
-                    <div>
-                        <p><strong>Live Tracking</strong></p>
-                        <p>Out for delivery • Expected by 6:00 PM</p>
-                    </div>
-                </div>
-
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button class="btn btn-success" onclick="updateDeliveryStatus('LI-2024-003', 'delivered')">
-                        <i class="fas fa-check-circle"></i> Confirm Delivery
-                    </button>
-                    <button class="btn btn-outline" onclick="viewLiveTracking('LI-2024-003')">
-                        <i class="fas fa-location-dot"></i> Live Track
-                    </button>
-                </div>
-            </div>
-
-            <!-- Delivered Delivery -->
-            <div class="delivery-card delivered" data-status="delivered">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div>
-                        <span class="badge badge-success">Delivered</span>
-                        <h3 style="margin: 10px 0;">Order #LI-2024-000</h3>
-                        <p><i class="fas fa-user"></i> Neha Gupta - 9876543213</p>
-                        <p><i class="fas fa-map-marker"></i> 321, Hill View, Pune - 411001</p>
-                    </div>
-                    <div style="text-align: right;">
-                        <p><strong>Amount:</strong> ₹8,500</p>
-                        <p><strong>Delivery Charge:</strong> ₹120</p>
-                    </div>
-                </div>
-                <div style="margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 8px;">
-                    <p><i class="fas fa-check-circle" style="color: #10b981;"></i> Delivered on 2024-01-15 at 2:30 PM</p>
-                    <p><i class="fas fa-star" style="color: #f59e0b;"></i> Customer Rating: 4.5/5</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Delivery Map Modal -->
-        <div id="trackingModal" class="modal" style="display: none;">
-            <div class="modal-content" style="max-width: 600px;">
-                <div class="modal-header">
-                    <h3>Live Tracking - Order #LI-2024-003</h3>
-                    <button class="close-btn" onclick="closeModal('trackingModal')">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div style="height: 300px; background: #f0f0f0; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-map" style="font-size: 64px; color: var(--gray);"></i>
-                        <p style="margin-left: 15px;">Map integration would be here</p>
-                    </div>
-                    <div style="margin-top: 20px;">
-                        <h4>Delivery Details</h4>
-                        <p><strong>Delivery Partner:</strong> Lira Express</p>
-                        <p><strong>Tracking ID:</strong> LEX-2024-003-9876</p>
-                        <p><strong>Estimated Delivery:</strong> Today, 6:00 PM</p>
-                        <p><strong>Current Location:</strong> Near Customer Location</p>
-                    </div>
-                </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('codeModal')">Cancel</button>
+                <button class="btn btn-success" onclick="verifyDeliveryCode()">
+                    <i class="fas fa-check-circle"></i> Complete Delivery
+                </button>
             </div>
         </div>
     </div>
 
     <script>
+        let currentOrderId = null;
+
+        // Load deliveries
+        async function loadDeliveries() {
+            try {
+                const response = await fetch('/api/franchise/pending-deliveries', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                
+                const deliveries = await response.json();
+                
+                // Update stats
+                updateStats(deliveries);
+                
+                // Display deliveries
+                displayDeliveries(deliveries);
+                
+            } catch (error) {
+                console.error('Failed to load deliveries:', error);
+            }
+        }
+
+        function updateStats(deliveries) {
+            const pending = deliveries.filter(d => d.deliveryStatus === 'pending').length;
+            const processing = deliveries.filter(d => d.deliveryStatus === 'processing').length;
+            const outForDelivery = deliveries.filter(d => d.deliveryStatus === 'out_for_delivery').length;
+            
+            const today = new Date().toDateString();
+            const deliveredToday = deliveries.filter(d => 
+                d.deliveryStatus === 'delivered' && 
+                new Date(d.deliveredAt).toDateString() === today
+            ).length;
+            
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('processingCount').textContent = processing;
+            document.getElementById('outForDeliveryCount').textContent = outForDelivery;
+            document.getElementById('deliveredTodayCount').textContent = deliveredToday;
+        }
+
+        function displayDeliveries(deliveries) {
+            const container = document.getElementById('deliveryList');
+            
+            if(deliveries.length === 0) {
+                container.innerHTML = '<div class="glass-card" style="text-align: center; padding: 50px;">No deliveries found</div>';
+                return;
+            }
+            
+            container.innerHTML = deliveries.map(order => {
+                const statusClass = order.deliveryStatus;
+                const statusText = order.deliveryStatus.replace(/_/g, ' ').toUpperCase();
+                
+                let actionButtons = '';
+                
+                if(order.deliveryStatus === 'pending') {
+                    actionButtons = `
+                        <button class="btn btn-primary" onclick="updateStatus('${order._id}', 'processing')">
+                            <i class="fas fa-check"></i> Accept Delivery
+                        </button>
+                    `;
+                } else if(order.deliveryStatus === 'processing') {
+                    actionButtons = `
+                        <button class="btn btn-primary" onclick="updateStatus('${order._id}', 'out_for_delivery')">
+                            <i class="fas fa-truck"></i> Mark Out for Delivery
+                        </button>
+                    `;
+                } else if(order.deliveryStatus === 'out_for_delivery') {
+                    actionButtons = `
+                        <button class="btn btn-success" onclick="openCodeModal('${order._id}', '${order.orderId}', '${order.userId}')">
+                            <i class="fas fa-check-circle"></i> Verify Code & Deliver
+                        </button>
+                        ${order.deliveryCode ? `<small style="display: block; margin-top: 5px;">Code: ${order.deliveryCode} (internal)</small>` : ''}
+                    `;
+                }
+                
+                return `
+                    <div class="delivery-card ${statusClass}" data-status="${order.deliveryStatus}">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <span class="badge ${getStatusBadgeClass(order.deliveryStatus)}">${statusText}</span>
+                                <h3 style="margin: 10px 0;">Order #${order.orderId}</h3>
+                                <p><i class="fas fa-user"></i> Customer ID: ${order.userId}</p>
+                                ${order.deliveryAddress ? `
+                                    <p><i class="fas fa-map-marker"></i> ${order.deliveryAddress.street}, ${order.deliveryAddress.city} - ${order.deliveryAddress.pincode}</p>
+                                ` : ''}
+                            </div>
+                            <div style="text-align: right;">
+                                <p><strong>Amount:</strong> ₹${order.totalAmount}</p>
+                                <p><strong>Delivery Charge:</strong> ₹${order.deliveryCharge || 0}</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            ${actionButtons}
+                            <button class="btn btn-outline" onclick="viewDetails('${order._id}')">
+                                <i class="fas fa-eye"></i> Details
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getStatusBadgeClass(status) {
+            const classes = {
+                'pending': 'badge-warning',
+                'processing': 'badge-primary',
+                'out_for_delivery': 'badge-secondary',
+                'delivered': 'badge-success',
+                'failed': 'badge-danger',
+                'cancelled': 'badge-danger'
+            };
+            return classes[status] || 'badge-secondary';
+        }
+
+        async function updateStatus(orderId, newStatus) {
+            try {
+                const response = await fetch(`/api/delivery/update-status/${orderId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                const data = await response.json();
+                
+                if(data.success) {
+                    showNotification(`Status updated to ${newStatus}`, 'success');
+                    
+                    // If code was generated, show it
+                    if(data.deliveryCode) {
+                        alert(`Delivery Code for this order: ${data.deliveryCode}\nShare this with customer for verification? Actually customer will see it on their dashboard.`);
+                    }
+                    
+                    loadDeliveries(); // Reload list
+                }
+            } catch (error) {
+                showNotification('Failed to update status', 'error');
+            }
+        }
+
+        function openCodeModal(orderId, orderNumber, customerId) {
+            currentOrderId = orderId;
+            document.getElementById('verifyOrderId').textContent = `Order #${orderNumber}`;
+            document.getElementById('verifyCustomer').textContent = `Customer ID: ${customerId}`;
+            document.getElementById('verificationCode').value = '';
+            document.getElementById('confirmDelivery').checked = false;
+            document.getElementById('codeModal').style.display = 'flex';
+        }
+
+        async function verifyDeliveryCode() {
+            const code = document.getElementById('verificationCode').value;
+            const confirmed = document.getElementById('confirmDelivery').checked;
+            const photoFile = document.getElementById('deliveryPhoto').files[0];
+            
+            if(!code || code.length !== 6) {
+                showNotification('Please enter 6-digit code', 'error');
+                return;
+            }
+            
+            if(!confirmed) {
+                showNotification('Please confirm delivery', 'error');
+                return;
+            }
+            
+            // In production, upload photo first
+            let photoUrl = null;
+            if(photoFile) {
+                // Upload photo logic here
+                photoUrl = 'uploaded-photo.jpg';
+            }
+            
+            try {
+                const response = await fetch('/api/delivery/verify-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ 
+                        orderId: currentOrderId, 
+                        enteredCode: code,
+                        photoProof: photoUrl
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if(data.success) {
+                    showNotification('✅ Delivery successful!', 'success');
+                    closeModal('codeModal');
+                    loadDeliveries(); // Reload list
+                } else {
+                    showNotification('❌ ' + (data.error || 'Invalid code'), 'error');
+                }
+            } catch (error) {
+                showNotification('Verification failed', 'error');
+            }
+        }
+
         function filterDeliveries(status) {
-            // Update active filter
             document.querySelectorAll('.delivery-filter-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
             
-            // Filter deliveries
             const cards = document.querySelectorAll('.delivery-card');
             cards.forEach(card => {
                 if(status === 'all' || card.dataset.status === status) {
@@ -318,36 +401,16 @@
             });
         }
 
-        function updateDeliveryStatus(orderId, status) {
-            const statusMessages = {
-                'processing': 'Delivery accepted and processing started',
-                'shipped': 'Order marked as shipped',
-                'delivered': 'Order confirmed as delivered'
-            };
-            
-            showNotification(`Order ${orderId}: ${statusMessages[status]}`, 'success');
-            
-            // In production, API call here
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
-        }
-
         function viewDetails(orderId) {
-            showNotification(`Loading details for order ${orderId}`, 'info');
-        }
-
-        function viewTracking(orderId) {
-            document.getElementById('trackingModal').style.display = 'flex';
-        }
-
-        function viewLiveTracking(orderId) {
-            document.getElementById('trackingModal').style.display = 'flex';
+            showNotification(`Loading details for order`, 'info');
         }
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
         }
+
+        // Load on page load
+        document.addEventListener('DOMContentLoaded', loadDeliveries);
     </script>
     <script src="/script.js"></script>
 </body>

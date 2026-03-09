@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            padding: 30px;
+            border: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+            background: white;
+        }
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        .invoice-title {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        .invoice-details {
+            margin-bottom: 30px;
+        }
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .invoice-table th {
+            background: var(--primary);
+            color: white;
+            padding: 12px;
+        }
+        .invoice-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .invoice-total {
+            text-align: right;
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 20px;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="invoice-box">
+            <div class="invoice-header">
+                <div>
+                    <div class="invoice-title">Lira</div>
+                    <p>Premium MLM Platform</p>
+                </div>
+                <div>
+                    <h3>INVOICE</h3>
+                    <p>#INV-2024-001</p>
+                    <p>Date: 2024-01-15</p>
+                </div>
+            </div>
+
+            <div class="invoice-details">
+                <h4>Bill To:</h4>
+                <p><strong>User ID:</strong> 9876543210</p>
+                <p><strong>Name:</strong> John Doe</p>
+                <p><strong>Mobile:</strong> 9876543210</p>
+            </div>
+
+            <table class="invoice-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Gold Ring (2g)</td>
+                        <td>1</td>
+                        <td>₹12,000</td>
+                        <td>₹12,000</td>
+                    </tr>
+                    <tr>
+                        <td>Silver Chain (10g)</td>
+                        <td>1</td>
+                        <td>₹8,000</td>
+                        <td>₹8,000</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="invoice-total">
+                <p>Subtotal: ₹20,000</p>
+                <p>GST (18%): ₹3,600</p>
+                <p style="font-size: 24px;">Grand Total: ₹23,600</p>
+            </div>
+
+            <div style="margin-top: 50px; text-align: center; color: var(--gray);">
+                <p>Thank you for shopping with Lira!</p>
+                <p>This is a computer generated invoice</p>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;" class="no-print">
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print"></i> Print Invoice
+            </button>
+            <button class="btn btn-outline" onclick="window.location.href='/dashboard'">
+                Back to Dashboard
+            </button>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

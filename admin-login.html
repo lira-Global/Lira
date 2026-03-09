@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira Admin</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/admin-login" class="active">Admin Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 80px);">
+        <div class="glass-card" style="max-width: 400px; width: 100%;">
+            <h1 style="text-align: center; margin-bottom: 30px; color: var(--primary);">Admin Access</h1>
+            
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="username" class="form-control" value="admin" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="password" class="form-control" value="admin@123" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Login to Dashboard</button>
+            </form>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="/" style="color: var(--gray);"><i class="fas fa-arrow-left"></i> Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

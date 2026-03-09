@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira</div>
+            <div class="nav-links">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/profile">Profile</a>
+                <a href="/user-message" class="active">Messages</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="glass-card">
+            <div style="margin-bottom: 20px;">
+                <select id="toUserId" class="form-control" onchange="loadMessages()">
+                    <option value="">Select User</option>
+                </select>
+            </div>
+
+            <div class="message-container">
+                <div class="message-header">
+                    <i class="fas fa-user"></i>
+                    <span id="selectedUser">Select a user to start chatting</span>
+                </div>
+                
+                <div class="message-body" id="messageBody"></div>
+                
+                <form id="messageForm" class="message-footer">
+                    <input type="text" id="messageInput" class="message-input" placeholder="Type your message...">
+                    <input type="file" id="fileInput" style="display: none;" onchange="updateFileLabel()">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <button type="submit" class="message-send-btn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateFileLabel() {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length > 0) {
+                showNotification('File selected: ' + fileInput.files[0].name, 'info');
+            }
+        }
+    </script>
+    <script src="/script.js"></script>
+</body>
+</html>

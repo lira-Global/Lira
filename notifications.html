@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .notifications-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .notification-filters {
+            display: flex;
+            gap: 10px;
+        }
+        .notification-item {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s;
+            border-left: 4px solid;
+            position: relative;
+        }
+        .notification-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .notification-item.unread {
+            background: #f0f9ff;
+            border-left-color: var(--primary);
+        }
+        .notification-item.read {
+            border-left-color: #e2e8f0;
+        }
+        .notification-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .icon-income { background: #d1fae5; color: #10b981; }
+        .icon-payout { background: #fee2e2; color: #ef4444; }
+        .icon-system { background: #e9d5ff; color: #8b5cf6; }
+        .icon-promo { background: #fed7aa; color: #f59e0b; }
+        .icon-message { background: #dbeafe; color: #3b82f6; }
+        
+        .notification-content {
+            flex: 1;
+        }
+        .notification-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .notification-message {
+            color: var(--gray);
+            font-size: 14px;
+        }
+        .notification-time {
+            color: #a0aec0;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .notification-badge {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--primary);
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        .mark-read-btn {
+            color: var(--primary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .notification-item:hover .mark-read-btn {
+            opacity: 1;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--gray);
+        }
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira</div>
+            <div class="nav-links">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/notifications" class="active">Notifications</a>
+                <a href="/user-message">Messages</a>
+                <a href="/income">Income</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="notifications-header">
+            <h1>Notifications</h1>
+            <div class="notification-filters">
+                <button class="btn btn-outline" onclick="markAllRead()">
+                    <i class="fas fa-check-double"></i> Mark All Read
+                </button>
+                <button class="btn btn-outline" onclick="clearAll()">
+                    <i class="fas fa-trash"></i> Clear All
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="pool-tabs" style="margin-bottom: 30px;">
+            <div class="pool-tab active" onclick="filterNotifications('all')">All</div>
+            <div class="pool-tab" onclick="filterNotifications('unread')">Unread</div>
+            <div class="pool-tab" onclick="filterNotifications('income')">Income</div>
+            <div class="pool-tab" onclick="filterNotifications('system')">System</div>
+            <div class="pool-tab" onclick="filterNotifications('promo')">Promotions</div>
+        </div>
+
+        <!-- Notifications List -->
+        <div id="notificationsList">
+            <!-- Income Notification - Unread -->
+            <div class="notification-item unread" data-type="income" data-read="false">
+                <div class="notification-icon icon-income">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">Income Credited</div>
+                    <div class="notification-message">You received ₹1,234 from Level 1 income. From user: Rajesh (9876543210)</div>
+                    <div class="notification-time">5 minutes ago</div>
+                </div>
+                <button class="mark-read-btn" onclick="markAsRead(this)">
+                    <i class="fas fa-circle"></i> Mark as read
+                </button>
+                <span class="notification-badge"></span>
+            </div>
+
+            <!-- Payout Notification - Unread -->
+            <div class="notification-item unread" data-type="system" data-read="false">
+                <div class="notification-icon icon-payout">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">Payout Approved</div>
+                    <div class="notification-message">Your payout request of ₹5,000 has been approved. Amount will be credited soon.</div>
+                    <div class="notification-time">2 hours ago</div>
+                </div>
+                <button class="mark-read-btn" onclick="markAsRead(this)">
+                    <i class="fas fa-circle"></i> Mark as read
+                </button>
+                <span class="notification-badge"></span>
+            </div>
+
+            <!-- System Notification - Read -->
+            <div class="notification-item read" data-type="system" data-read="true">
+                <div class="notification-icon icon-system">
+                    <i class="fas fa-gift"></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">🎉 Happy Birthday!</div>
+                    <div class="notification-message">Wishing you a fantastic birthday! Enjoy special rewards today.</div>
+                    <div class="notification-time">Yesterday at 9:00 AM</div>
+                </div>
+                <button class="mark-read-btn" onclick="markAsRead(this)">
+                    <i class="fas fa-circle"></i> Mark as unread
+                </button>
+            </div>
+
+            <!-- Promo Notification -->
+            <div class="notification-item read" data-type="promo" data-read="true">
+                <div class="notification-icon icon-promo">
+                    <i class="fas fa-tags"></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">Special Offer!</div>
+                    <div class="notification-message">Get 10% cashback on all gold purchases this weekend. Limited period offer!</div>
+                    <div class="notification-time">2 days ago</div>
+                </div>
+                <button class="mark-read-btn" onclick="markAsRead(this)">
+                    <i class="fas fa-circle"></i> Mark as unread
+                </button>
+            </div>
+
+            <!-- Franchise Notification -->
+            <div class="notification-item read" data-type="income" data-read="true">
+                <div class="notification-icon icon-income">
+                    <i class="fas fa-store"></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">Franchise Commission</div>
+                    <div class="notification-message">You earned ₹2,345 as franchise commission from order #LI-2024-003</div>
+                    <div class="notification-time">3 days ago</div>
+                </div>
+                <button class="mark-read-btn" onclick="markAsRead(this)">
+                    <i class="fas fa-circle"></i> Mark as unread
+                </button>
+            </div>
+
+            <!-- Pool Notification -->
+            <div class="notification-item read" data-type="income" data-read="true">
+                <div class="notification-icon icon-income">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">Pool Distribution</div>
+                    <div class="notification-message">You received ₹500 from General Pool distribution</div>
+                    <div class="notification-time">4 days ago</div>
+                </div>
+                <button class="mark-read-btn" onclick="markAsRead(this)">
+                    <i class="fas fa-circle"></i> Mark as unread
+                </button>
+            </div>
+
+            <!-- Message Notification -->
+            <div class="notification-item unread" data-type="system" data-read="false">
+                <div class="notification-icon icon-message">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">New Message</div>
+                    <div class="notification-message">You have a new message from Admin regarding your recent payout</div>
+                    <div class="notification-time">5 days ago</div>
+                </div>
+                <button class="mark-read-btn" onclick="markAsRead(this)">
+                    <i class="fas fa-circle"></i> Mark as read
+                </button>
+                <span class="notification-badge"></span>
+            </div>
+        </div>
+
+        <!-- Load More -->
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="btn btn-outline" onclick="loadMore()">
+                <i class="fas fa-spinner"></i> Load More
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function filterNotifications(type) {
+            // Update active tab
+            document.querySelectorAll('.pool-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Filter notifications
+            const notifications = document.querySelectorAll('.notification-item');
+            notifications.forEach(notification => {
+                if(type === 'all') {
+                    notification.style.display = 'flex';
+                } else if(type === 'unread') {
+                    if(notification.dataset.read === 'false') {
+                        notification.style.display = 'flex';
+                    } else {
+                        notification.style.display = 'none';
+                    }
+                } else {
+                    if(notification.dataset.type === type) {
+                        notification.style.display = 'flex';
+                    } else {
+                        notification.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        function markAsRead(btn) {
+            const notification = btn.closest('.notification-item');
+            const isUnread = notification.dataset.read === 'false';
+            
+            if(isUnread) {
+                notification.dataset.read = 'true';
+                notification.classList.remove('unread');
+                notification.classList.add('read');
+                notification.querySelector('.notification-badge')?.remove();
+                btn.innerHTML = '<i class="fas fa-circle"></i> Mark as unread';
+                showNotification('Marked as read', 'success');
+            } else {
+                notification.dataset.read = 'false';
+                notification.classList.remove('read');
+                notification.classList.add('unread');
+                notification.innerHTML += '<span class="notification-badge"></span>';
+                btn.innerHTML = '<i class="fas fa-circle"></i> Mark as read';
+                showNotification('Marked as unread', 'info');
+            }
+        }
+
+        function markAllRead() {
+            document.querySelectorAll('.notification-item[data-read="false"]').forEach(notification => {
+                notification.dataset.read = 'true';
+                notification.classList.remove('unread');
+                notification.classList.add('read');
+                notification.querySelector('.notification-badge')?.remove();
+            });
+            showNotification('All notifications marked as read', 'success');
+        }
+
+        function clearAll() {
+            if(confirm('Clear all notifications?')) {
+                document.getElementById('notificationsList').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-bell-slash"></i>
+                        <h3>No Notifications</h3>
+                        <p>You're all caught up! Check back later for updates.</p>
+                    </div>
+                `;
+                showNotification('All notifications cleared', 'info');
+            }
+        }
+
+        function loadMore() {
+            showNotification('Loading more notifications...', 'info');
+            // In production, API call here
+        }
+    </script>
+    <script src="/script.js"></script>
+</body>
+</html>

@@ -882,203 +882,7 @@ app.get('/api/franchise/delivery-history', authMiddleware, franchiseMiddleware, 
     }
 });
 
-// Distribute Income Function
-async function distributeIncome(user, purchase, products) {
-    try {
-        const settings = await Settings.findOne({ key: 'incomeSettings' });
-        const levels = settings?.value?.levels || 10;
-        
-        let currentUser = user;
-        let totalMakingPacking = 0;
-        
-        // Calculate total making + packing
-        for (const item of products) {
-            const product = await Product.findById(item.productId);
-            totalMakingPacking += product.makingPacking * item.quantity;
-        }
-
-        // Distribute to upline
-        for (let level = 1; level <= levels; level++) {
-            // Find sponsor/upline
-            const upline = await User.findOne({ userId: currentUser.sponsorId });
-            
-            if (!upline) break;
-
-            // Skip if inactive
-            if (!upline.active || (upline.expiryDate && upline.expiryDate < new Date())) {
-                currentUser = upline;
-                continue;
-            }
-
-            // Check level unlock condition (levels 6-10 require 11-15 active directs)
-            if (level >= 6) {
-                const activeDirects = await User.countDocuments({
-                    sponsorId: upline.userId,
-                    active: true,
-                    expiryDate: { $gt: new Date() }
-                });
-                
-                const requiredDirects = level + 5; // 11 for level 6, 12 for level 7, etc.
-                if (activeDirects < requiredDirects) {
-                    currentUser = upline;
-                    continue;
-                }
-            }
-
-            // Calculate income percentage (admin configurable)
-            const percentage = settings?.value?.[`level${level}`] || 5;
-            const incomeAmount = (totalMakingPacking * percentage) / 100;
-
-            // Create income record
-            const income = new Income({
-                userId: upline.userId,
-                fromUserId: user.userId,
-                level,
-                amount: incomeAmount,
-                type: purchase.type === 'regular' ? 'purchase' : 'repurchase',
-                purchaseId: purchase._id
-            });
-
-            await income.save();
-
-            // Credit to wallet
-            upline.wallet += incomeAmount;
-            await upline.save();
-
-            currentUser = upline;
-        }
-
-        // Franchise commission
-        if (purchase.franchiseId) {
-            const franchise = await User.findOne({ userId: purchase.franchiseId });
-            if (franchise) {
-                let franchiseCommission = 0;
-                
-                for (const item of products) {
-                    const product = await Product.findById(item.productId);
-                    franchiseCommission += product.franchiseCharge * item.quantity;
-                }
-
-                const income = new Income({
-                    userId: franchise.userId,
-                    fromUserId: user.userId,
-                    amount: franchiseCommission,
-                    type: 'franchise',
-                    purchaseId: purchase._id
-                });
-
-                await income.save();
-                franchise.wallet += franchiseCommission;
-                await franchise.save();
-
-                // Update pool
-                await updatePool('franchise', franchise.userId, purchase.totalAmount);
-            }
-        }
-
-        // Update general pool
-        await updatePool('general', user.userId, purchase.totalAmount);
-
-    } catch (error) {
-        console.error('Income distribution error:', error);
-    }
-}
-
-// Update Pool Function
-async function updatePool(type, userId, amount) {
-    try {
-        let pool = await Pool.findOne({ type });
-        
-        if (!pool) {
-            pool = new Pool({ type, members: [] });
-        }
-
-        // Add to pool fund
-        pool.totalFund += amount * 0.01; // 1% goes to pool (admin configurable)
-
-        // Check if user already in pool
-        const existingMember = pool.members.find(m => m.userId === userId);
-        
-        if (existingMember) {
-            existingMember.totalPurchase += amount;
-        } else {
-            pool.members.push({
-                userId,
-                totalPurchase: amount,
-                joinDate: new Date()
-            });
-        }
-
-        // Distribute pool income
-        await distributePoolIncome(pool);
-
-        await pool.save();
-    } catch (error) {
-        console.error('Pool update error:', error);
-    }
-}
-
-// Distribute Pool Income
-async function distributePoolIncome(pool) {
-    try {
-        if (pool.members.length < 100) return;
-
-        const settings = await Settings.findOne({ key: 'poolSettings' });
-        const distributionType = settings?.value?.distributionType || 'percentage';
-        const fixedAmount = settings?.value?.fixedAmount || 100;
-
-        if (distributionType === 'percentage') {
-            // Distribute based on purchase amount
-            const totalPurchase = pool.members.reduce((sum, m) => sum + m.totalPurchase, 0);
-            
-            for (const member of pool.members) {
-                const percentage = (member.totalPurchase / totalPurchase) * 100;
-                const income = (pool.totalFund * percentage) / 100;
-                
-                const user = await User.findOne({ userId: member.userId });
-                if (user) {
-                    const incomeRecord = new Income({
-                        userId: member.userId,
-                        amount: income,
-                        type: 'pool'
-                    });
-                    await incomeRecord.save();
-                    
-                    user.wallet += income;
-                    await user.save();
-                }
-            }
-        } else {
-            // Equal distribution
-            const perMember = fixedAmount;
-            
-            for (const member of pool.members) {
-                const user = await User.findOne({ userId: member.userId });
-                if (user && pool.totalFund >= perMember) {
-                    const incomeRecord = new Income({
-                        userId: member.userId,
-                        amount: perMember,
-                        type: 'pool'
-                    });
-                    await incomeRecord.save();
-                    
-                    user.wallet += perMember;
-                    await user.save();
-                    
-                    pool.totalFund -= perMember;
-                    
-                    // Remove member if reached fixed amount
-                    if (member.totalPurchase >= perMember * 100) {
-                        member.exitDate = new Date();
-                        pool.members = pool.members.filter(m => m.userId !== member.userId);
-                    }
-                }
-            }
-        }
-    } catch (error) {
-        console.error('Pool distribution error:', error);
-    }
-}
+// ==================== ADMIN ROUTES ====================
 
 // Admin - Add Category
 app.post('/api/admin/category', adminMiddleware, async (req, res) => {
@@ -1092,7 +896,7 @@ app.post('/api/admin/category', adminMiddleware, async (req, res) => {
     }
 });
 
-// Admin - Add Product
+// Admin - Add Product - FIXED VERSION (No duplicate GST)
 app.post('/api/admin/product', adminMiddleware, upload.single('image'), async (req, res) => {
     try {
         const category = await Category.findOne({ name: req.body.category });
@@ -1101,7 +905,9 @@ app.post('/api/admin/product', adminMiddleware, upload.single('image'), async (r
             return res.status(400).json({ error: 'Category not found' });
         }
 
-        let purchaseRate, expense, makingPacking, deliveryCharge, franchiseCharge, franchisePool, generalPool, gst;
+        let purchaseRate, expense, makingPacking, deliveryCharge, franchiseCharge, franchisePool, generalPool;
+        // GST declared only once
+        const gst = category.gst;
 
         if (category.type === 'gram' && req.body.gram) {
             purchaseRate = category.perGramRate * parseFloat(req.body.gram);
@@ -1121,7 +927,7 @@ app.post('/api/admin/product', adminMiddleware, upload.single('image'), async (r
             generalPool = category.generalPool;
         }
 
-        const gst = category.gst;
+        // Calculate totals - using gst variable
         const subtotal = purchaseRate + expense + makingPacking + deliveryCharge + franchiseCharge + franchisePool + generalPool;
         const gstAmount = (subtotal * gst) / 100;
         const totalAmount = subtotal + gstAmount;
@@ -1263,6 +1069,8 @@ app.post('/api/admin/settings', adminMiddleware, async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
+
+// ==================== USER ROUTES ====================
 
 // User - Request Payout
 app.post('/api/request-payout', authMiddleware, async (req, res) => {
@@ -1465,6 +1273,208 @@ app.get('/api/dashboard', authMiddleware, async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
+
+// ==================== INCOME DISTRIBUTION FUNCTIONS ====================
+
+// Distribute Income Function
+async function distributeIncome(user, purchase, products) {
+    try {
+        const settings = await Settings.findOne({ key: 'incomeSettings' });
+        const levels = settings?.value?.levels || 10;
+        
+        let currentUser = user;
+        let totalMakingPacking = 0;
+        
+        // Calculate total making + packing
+        for (const item of products) {
+            const product = await Product.findById(item.productId);
+            totalMakingPacking += product.makingPacking * item.quantity;
+        }
+
+        // Distribute to upline
+        for (let level = 1; level <= levels; level++) {
+            // Find sponsor/upline
+            const upline = await User.findOne({ userId: currentUser.sponsorId });
+            
+            if (!upline) break;
+
+            // Skip if inactive
+            if (!upline.active || (upline.expiryDate && upline.expiryDate < new Date())) {
+                currentUser = upline;
+                continue;
+            }
+
+            // Check level unlock condition (levels 6-10 require 11-15 active directs)
+            if (level >= 6) {
+                const activeDirects = await User.countDocuments({
+                    sponsorId: upline.userId,
+                    active: true,
+                    expiryDate: { $gt: new Date() }
+                });
+                
+                const requiredDirects = level + 5; // 11 for level 6, 12 for level 7, etc.
+                if (activeDirects < requiredDirects) {
+                    currentUser = upline;
+                    continue;
+                }
+            }
+
+            // Calculate income percentage (admin configurable)
+            const percentage = settings?.value?.[`level${level}`] || 5;
+            const incomeAmount = (totalMakingPacking * percentage) / 100;
+
+            // Create income record
+            const income = new Income({
+                userId: upline.userId,
+                fromUserId: user.userId,
+                level,
+                amount: incomeAmount,
+                type: purchase.type === 'regular' ? 'purchase' : 'repurchase',
+                purchaseId: purchase._id
+            });
+
+            await income.save();
+
+            // Credit to wallet
+            upline.wallet += incomeAmount;
+            await upline.save();
+
+            currentUser = upline;
+        }
+
+        // Franchise commission
+        if (purchase.franchiseId) {
+            const franchise = await User.findOne({ userId: purchase.franchiseId });
+            if (franchise) {
+                let franchiseCommission = 0;
+                
+                for (const item of products) {
+                    const product = await Product.findById(item.productId);
+                    franchiseCommission += product.franchiseCharge * item.quantity;
+                }
+
+                const income = new Income({
+                    userId: franchise.userId,
+                    fromUserId: user.userId,
+                    amount: franchiseCommission,
+                    type: 'franchise',
+                    purchaseId: purchase._id
+                });
+
+                await income.save();
+                franchise.wallet += franchiseCommission;
+                await franchise.save();
+
+                // Update pool
+                await updatePool('franchise', franchise.userId, purchase.totalAmount);
+            }
+        }
+
+        // Update general pool
+        await updatePool('general', user.userId, purchase.totalAmount);
+
+    } catch (error) {
+        console.error('Income distribution error:', error);
+    }
+}
+
+// Update Pool Function
+async function updatePool(type, userId, amount) {
+    try {
+        let pool = await Pool.findOne({ type });
+        
+        if (!pool) {
+            pool = new Pool({ type, members: [] });
+        }
+
+        // Add to pool fund
+        pool.totalFund += amount * 0.01; // 1% goes to pool (admin configurable)
+
+        // Check if user already in pool
+        const existingMember = pool.members.find(m => m.userId === userId);
+        
+        if (existingMember) {
+            existingMember.totalPurchase += amount;
+        } else {
+            pool.members.push({
+                userId,
+                totalPurchase: amount,
+                joinDate: new Date()
+            });
+        }
+
+        // Distribute pool income
+        await distributePoolIncome(pool);
+
+        await pool.save();
+    } catch (error) {
+        console.error('Pool update error:', error);
+    }
+}
+
+// Distribute Pool Income
+async function distributePoolIncome(pool) {
+    try {
+        if (pool.members.length < 100) return;
+
+        const settings = await Settings.findOne({ key: 'poolSettings' });
+        const distributionType = settings?.value?.distributionType || 'percentage';
+        const fixedAmount = settings?.value?.fixedAmount || 100;
+
+        if (distributionType === 'percentage') {
+            // Distribute based on purchase amount
+            const totalPurchase = pool.members.reduce((sum, m) => sum + m.totalPurchase, 0);
+            
+            for (const member of pool.members) {
+                const percentage = (member.totalPurchase / totalPurchase) * 100;
+                const income = (pool.totalFund * percentage) / 100;
+                
+                const user = await User.findOne({ userId: member.userId });
+                if (user) {
+                    const incomeRecord = new Income({
+                        userId: member.userId,
+                        amount: income,
+                        type: 'pool'
+                    });
+                    await incomeRecord.save();
+                    
+                    user.wallet += income;
+                    await user.save();
+                }
+            }
+        } else {
+            // Equal distribution
+            const perMember = fixedAmount;
+            
+            for (const member of pool.members) {
+                const user = await User.findOne({ userId: member.userId });
+                if (user && pool.totalFund >= perMember) {
+                    const incomeRecord = new Income({
+                        userId: member.userId,
+                        amount: perMember,
+                        type: 'pool'
+                    });
+                    await incomeRecord.save();
+                    
+                    user.wallet += perMember;
+                    await user.save();
+                    
+                    pool.totalFund -= perMember;
+                    
+                    // Remove member if reached fixed amount
+                    if (member.totalPurchase >= perMember * 100) {
+                        member.exitDate = new Date();
+                        pool.members = pool.members.filter(m => m.userId !== member.userId);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Pool distribution error:', error);
+    }
+}
+
+// ==================== SOCKET.IO ====================
 
 // Socket.io for real-time messaging
 io.on('connection', (socket) => {

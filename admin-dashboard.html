@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira Admin</div>
+            <div class="nav-links">
+                <a href="/admin-dashboard" class="active">Dashboard</a>
+                <a href="/admin-message">Messages</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="grid grid-4" style="margin-bottom: 30px;">
+            <div class="stat-card">
+                <h3>Total Users</h3>
+                <div class="value" id="totalUsers">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Active Users</h3>
+                <div class="value" id="activeUsers">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Pending Fund</h3>
+                <div class="value" id="pendingFund">₹0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Revenue</h3>
+                <div class="value" id="totalRevenue">₹0</div>
+            </div>
+        </div>
+
+        <div class="glass-card" style="margin-bottom: 30px;">
+            <h2 style="margin-bottom: 20px;">Pending Fund Requests</h2>
+            <div class="table-container">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>UTR</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fundRequests">
+                        <tr>
+                            <td colspan="5" style="text-align: center;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glass-card" style="margin-bottom: 30px;">
+            <h2 style="margin-bottom: 20px;">Pending Payouts</h2>
+            <div class="table-container">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>Net Amount</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payouts">
+                        <tr>
+                            <td colspan="5" style="text-align: center;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid grid-2">
+            <!-- Add Category -->
+            <div class="glass-card">
+                <h3 style="margin-bottom: 20px;">Add Category</h3>
+                <form id="categoryForm">
+                    <div class="form-group">
+                        <label class="form-label">Category Name</label>
+                        <input type="text" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Type</label>
+                        <select class="form-control">
+                            <option value="gram">Gram Based</option>
+                            <option value="piece">Piece Based</option>
+                            <option value="electronics">Electronics</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Category</button>
+                </form>
+            </div>
+
+            <!-- Add Product -->
+            <div class="glass-card">
+                <h3 style="margin-bottom: 20px;">Add Product</h3>
+                <form id="productForm">
+                    <div class="form-group">
+                        <label class="form-label">Product Name</label>
+                        <input type="text" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-control">
+                            <option>Gold</option>
+                            <option>Silver</option>
+                            <option>Diamond</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Gram/Quantity</label>
+                        <input type="number" class="form-control" step="0.1">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Product</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load admin data
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem('admin')) {
+                window.location.href = '/admin-login';
+            }
+            loadFundRequests();
+            loadPayouts();
+        });
+
+        async function loadFundRequests() {
+            // Mock data - in production, fetch from API
+            document.getElementById('fundRequests').innerHTML = `
+                <tr>
+                    <td>9876543210</td>
+                    <td>₹1000</td>
+                    <td>UTR123456</td>
+                    <td>2024-01-15</td>
+                    <td>
+                        <button class="btn btn-success" onclick="approveFund('123')">Approve</button>
+                        <button class="btn btn-danger" onclick="rejectFund('123')">Reject</button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        async function loadPayouts() {
+            document.getElementById('payouts').innerHTML = `
+                <tr>
+                    <td>9876543210</td>
+                    <td>₹5000</td>
+                    <td>₹4750</td>
+                    <td>2024-01-15</td>
+                    <td>
+                        <button class="btn btn-success" onclick="approvePayout('123')">Approve</button>
+                        <button class="btn btn-danger" onclick="rejectPayout('123')">Reject</button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        async function approveFund(id) {
+            showNotification('Fund request approved', 'success');
+        }
+
+        async function rejectFund(id) {
+            showNotification('Fund request rejected', 'warning');
+        }
+
+        function logout() {
+            localStorage.removeItem('admin');
+            window.location.href = '/admin-login';
+        }
+    </script>
+    <script src="/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lira - Premium Platform</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .hero-section {
+            text-align: center;
+            padding: 100px 20px;
+            color: white;
+        }
+        .hero-title {
+            font-size: 64px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .hero-subtitle {
+            font-size: 24px;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+        .feature-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 40px 30px;
+            color: white;
+            transition: transform 0.3s;
+        }
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .feature-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 50px;
+        }
+        .cta-button {
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .cta-primary {
+            background: white;
+            color: var(--primary);
+        }
+        .cta-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(255,255,255,0.3);
+        }
+        .cta-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        .cta-secondary:hover {
+            background: white;
+            color: var(--primary);
+        }
+        .products-section {
+            padding: 80px 20px;
+            background: white;
+        }
+        .section-title {
+            text-align: center;
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 50px;
+            color: var(--dark);
+        }
+        .footer {
+            background: var(--dark);
+            color: white;
+            padding: 60px 20px 20px;
+        }
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+        }
+        .footer-logo {
+            font-size: 32px;
+            font-weight: 800;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+        .footer-links {
+            list-style: none;
+        }
+        .footer-links li {
+            margin-bottom: 10px;
+        }
+        .footer-links a {
+            color: #a0aec0;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .footer-links a:hover {
+            color: white;
+        }
+        .copyright {
+            text-align: center;
+            padding-top: 40px;
+            margin-top: 40px;
+            border-top: 1px solid #2d3748;
+            color: #a0aec0;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira</div>
+            <div class="nav-links">
+                <a href="/" class="active">Home</a>
+                <a href="/products">Products</a>
+                <a href="/user-login">Login</a>
+                <a href="/register">Register</a>
+                <a href="/admin-login">Admin</a>
+                <a href="#" id="cartLink" style="position: relative">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span id="cartCount" class="badge badge-primary" style="position: absolute; top: -10px; right: -10px; display: none;">0</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero-section">
+        <div class="container">
+            <h1 class="hero-title">Welcome to Lira</h1>
+            <p class="hero-subtitle">India's Most Premium MLM E-commerce Platform</p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-gem"></i></div>
+                    <h3 class="feature-title">Premium Products</h3>
+                    <p>High-quality jewelry, electronics, and fashion items at competitive prices</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                    <h3 class="feature-title">10 Level Income</h3>
+                    <p>Earn from 10 levels of your network with our advanced MLM structure</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-store"></i></div>
+                    <h3 class="feature-title">Franchise Opportunity</h3>
+                    <p>Become a franchise partner and earn delivery charges and commissions</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-users"></i></div>
+                    <h3 class="feature-title">Pool Income</h3>
+                    <p>Participate in franchise and general pools for additional earnings</p>
+                </div>
+            </div>
+
+            <div class="cta-buttons">
+                <a href="/register" class="cta-button cta-primary">Get Started</a>
+                <a href="/products" class="cta-button cta-secondary">Browse Products</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="products-section">
+        <div class="container">
+            <h2 class="section-title">Featured Products</h2>
+            <div id="products-container" class="product-grid"></div>
+        </div>
+    </section>
+
+    <section class="products-section" style="background: #f8fafc;">
+        <div class="container">
+            <h2 class="section-title">Best Performers Today</h2>
+            <div id="bestPerformer" class="grid-2"></div>
+            <div id="bestEarner" class="grid-2"></div>
+        </div>
+    </section>
+
+    <section class="products-section" id="greetings"></section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div>
+                    <div class="footer-logo">Lira</div>
+                    <p style="color: #a0aec0; margin-bottom: 20px;">Premium MLM E-commerce Platform</p>
+                    <div style="display: flex; gap: 15px;">
+                        <a href="#" style="color: white;"><i class="fab fa-facebook"></i></a>
+                        <a href="#" style="color: white;"><i class="fab fa-twitter"></i></a>
+                        <a href="#" style="color: white;"><i class="fab fa-instagram"></i></a>
+                        <a href="#" style="color: white;"><i class="fab fa-linkedin"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 20px;">Quick Links</h4>
+                    <ul class="footer-links">
+                        <li><a href="/">Home</a></li>
+                        <li><a href="/products">Products</a></li>
+                        <li><a href="/user-login">Login</a></li>
+                        <li><a href="/register">Register</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 20px;">Support</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">Terms & Conditions</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Contact Us</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 20px;">Contact</h4>
+                    <ul class="footer-links">
+                        <li><i class="fas fa-phone"></i> +91 1234567890</li>
+                        <li><i class="fas fa-envelope"></i> support@lira.com</li>
+                        <li><i class="fas fa-map-marker"></i> Mumbai, India</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="copyright">
+                &copy; 2024 Lira. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script src="/script.js"></script>
+    <script>
+        // Update cart count on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const badge = document.getElementById('cartCount');
+            if (badge) {
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'inline' : 'none';
+            }
+        });
+    </script>
+</body>
+</html>

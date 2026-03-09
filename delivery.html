@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Management - Lira</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .delivery-filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .delivery-filter-btn {
+            padding: 10px 25px;
+            border-radius: 30px;
+            border: none;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .delivery-filter-btn.active {
+            background: var(--gradient);
+            color: white;
+        }
+        .delivery-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 4px solid;
+            transition: transform 0.3s;
+        }
+        .delivery-card:hover {
+            transform: translateX(5px);
+        }
+        .delivery-card.pending {
+            border-left-color: #f59e0b;
+        }
+        .delivery-card.processing {
+            border-left-color: #3b82f6;
+        }
+        .delivery-card.shipped {
+            border-left-color: #8b5cf6;
+        }
+        .delivery-card.delivered {
+            border-left-color: #10b981;
+        }
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            position: relative;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e2e8f0;
+            z-index: 1;
+        }
+        .timeline-step {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            flex: 1;
+        }
+        .timeline-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 5px;
+        }
+        .timeline-step.completed .timeline-icon {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+        .timeline-step.active .timeline-icon {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .tracking-map {
+            height: 200px;
+            background: #f8fafc;
+            border-radius: 12px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">Lira</div>
+            <div class="nav-links">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/delivery" class="active">Deliveries</a>
+                <a href="/franchise">Franchise</a>
+                <a href="/products">Products</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Delivery Stats -->
+        <div class="grid grid-4" style="margin-bottom: 30px;">
+            <div class="stat-card">
+                <h3>Total Deliveries</h3>
+                <div class="value" id="totalDeliveries">246</div>
+            </div>
+            <div class="stat-card">
+                <h3>Pending</h3>
+                <div class="value" id="pendingDeliveries">18</div>
+            </div>
+            <div class="stat-card">
+                <h3>In Transit</h3>
+                <div class="value" id="inTransitDeliveries">12</div>
+            </div>
+            <div class="stat-card">
+                <h3>Delivered Today</h3>
+                <div class="value" id="deliveredToday">8</div>
+            </div>
+        </div>
+
+        <!-- Delivery Filters -->
+        <div class="delivery-filters">
+            <button class="delivery-filter-btn active" onclick="filterDeliveries('all')">All</button>
+            <button class="delivery-filter-btn" onclick="filterDeliveries('pending')">Pending</button>
+            <button class="delivery-filter-btn" onclick="filterDeliveries('processing')">Processing</button>
+            <button class="delivery-filter-btn" onclick="filterDeliveries('shipped')">Shipped</button>
+            <button class="delivery-filter-btn" onclick="filterDeliveries('delivered')">Delivered</button>
+        </div>
+
+        <!-- Delivery List -->
+        <div id="deliveryList">
+            <!-- Pending Delivery -->
+            <div class="delivery-card pending" data-status="pending">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <span class="badge badge-warning">Pending</span>
+                        <h3 style="margin: 10px 0;">Order #LI-2024-001</h3>
+                        <p><i class="fas fa-user"></i> Rajesh Kumar - 9876543210</p>
+                        <p><i class="fas fa-map-marker"></i> 123, Main Street, Delhi - 110001</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p><strong>Amount:</strong> ₹12,000</p>
+                        <p><strong>Delivery Charge:</strong> ₹150</p>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="updateDeliveryStatus('LI-2024-001', 'processing')">
+                        <i class="fas fa-check"></i> Accept Delivery
+                    </button>
+                    <button class="btn btn-outline" onclick="viewDetails('LI-2024-001')">
+                        <i class="fas fa-eye"></i> Details
+                    </button>
+                </div>
+            </div>
+
+            <!-- Processing Delivery -->
+            <div class="delivery-card processing" data-status="processing">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <span class="badge badge-primary">Processing</span>
+                        <h3 style="margin: 10px 0;">Order #LI-2024-002</h3>
+                        <p><i class="fas fa-user"></i> Priya Singh - 9876543211</p>
+                        <p><i class="fas fa-map-marker"></i> 456, Park Avenue, Mumbai - 400001</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p><strong>Amount:</strong> ₹16,000</p>
+                        <p><strong>Delivery Charge:</strong> ₹200</p>
+                    </div>
+                </div>
+                
+                <!-- Timeline -->
+                <div class="timeline">
+                    <div class="timeline-step completed">
+                        <div class="timeline-icon"><i class="fas fa-check"></i></div>
+                        <small>Order Placed</small>
+                    </div>
+                    <div class="timeline-step active">
+                        <div class="timeline-icon"><i class="fas fa-box"></i></div>
+                        <small>Processing</small>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="timeline-icon"><i class="fas fa-truck"></i></div>
+                        <small>Shipped</small>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="timeline-icon"><i class="fas fa-home"></i></div>
+                        <small>Delivered</small>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="updateDeliveryStatus('LI-2024-002', 'shipped')">
+                        <i class="fas fa-truck"></i> Mark Shipped
+                    </button>
+                    <button class="btn btn-outline" onclick="viewTracking('LI-2024-002')">
+                        <i class="fas fa-map"></i> Track
+                    </button>
+                </div>
+            </div>
+
+            <!-- Shipped Delivery -->
+            <div class="delivery-card shipped" data-status="shipped">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <span class="badge badge-secondary">Shipped</span>
+                        <h3 style="margin: 10px 0;">Order #LI-2024-003</h3>
+                        <p><i class="fas fa-user"></i> Amit Sharma - 9876543212</p>
+                        <p><i class="fas fa-map-marker"></i> 789, Lake Road, Bangalore - 560001</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p><strong>Amount:</strong> ₹45,000</p>
+                        <p><strong>Delivery Charge:</strong> ₹300</p>
+                    </div>
+                </div>
+
+                <!-- Tracking Info -->
+                <div class="tracking-map">
+                    <i class="fas fa-map-marked-alt" style="font-size: 48px; margin-right: 10px;"></i>
+                    <div>
+                        <p><strong>Live Tracking</strong></p>
+                        <p>Out for delivery • Expected by 6:00 PM</p>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-success" onclick="updateDeliveryStatus('LI-2024-003', 'delivered')">
+                        <i class="fas fa-check-circle"></i> Confirm Delivery
+                    </button>
+                    <button class="btn btn-outline" onclick="viewLiveTracking('LI-2024-003')">
+                        <i class="fas fa-location-dot"></i> Live Track
+                    </button>
+                </div>
+            </div>
+
+            <!-- Delivered Delivery -->
+            <div class="delivery-card delivered" data-status="delivered">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <span class="badge badge-success">Delivered</span>
+                        <h3 style="margin: 10px 0;">Order #LI-2024-000</h3>
+                        <p><i class="fas fa-user"></i> Neha Gupta - 9876543213</p>
+                        <p><i class="fas fa-map-marker"></i> 321, Hill View, Pune - 411001</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p><strong>Amount:</strong> ₹8,500</p>
+                        <p><strong>Delivery Charge:</strong> ₹120</p>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 8px;">
+                    <p><i class="fas fa-check-circle" style="color: #10b981;"></i> Delivered on 2024-01-15 at 2:30 PM</p>
+                    <p><i class="fas fa-star" style="color: #f59e0b;"></i> Customer Rating: 4.5/5</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delivery Map Modal -->
+        <div id="trackingModal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h3>Live Tracking - Order #LI-2024-003</h3>
+                    <button class="close-btn" onclick="closeModal('trackingModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div style="height: 300px; background: #f0f0f0; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-map" style="font-size: 64px; color: var(--gray);"></i>
+                        <p style="margin-left: 15px;">Map integration would be here</p>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <h4>Delivery Details</h4>
+                        <p><strong>Delivery Partner:</strong> Lira Express</p>
+                        <p><strong>Tracking ID:</strong> LEX-2024-003-9876</p>
+                        <p><strong>Estimated Delivery:</strong> Today, 6:00 PM</p>
+                        <p><strong>Current Location:</strong> Near Customer Location</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function filterDeliveries(status) {
+            // Update active filter
+            document.querySelectorAll('.delivery-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Filter deliveries
+            const cards = document.querySelectorAll('.delivery-card');
+            cards.forEach(card => {
+                if(status === 'all' || card.dataset.status === status) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function updateDeliveryStatus(orderId, status) {
+            const statusMessages = {
+                'processing': 'Delivery accepted and processing started',
+                'shipped': 'Order marked as shipped',
+                'delivered': 'Order confirmed as delivered'
+            };
+            
+            showNotification(`Order ${orderId}: ${statusMessages[status]}`, 'success');
+            
+            // In production, API call here
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+
+        function viewDetails(orderId) {
+            showNotification(`Loading details for order ${orderId}`, 'info');
+        }
+
+        function viewTracking(orderId) {
+            document.getElementById('trackingModal').style.display = 'flex';
+        }
+
+        function viewLiveTracking(orderId) {
+            document.getElementById('trackingModal').style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+    </script>
+    <script src="/script.js"></script>
+</body>
+</html>
